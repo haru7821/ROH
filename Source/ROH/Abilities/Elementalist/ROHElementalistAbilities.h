@@ -81,3 +81,92 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
 	float MaxDistance = 1200.f;
 };
+
+/** 얼음화살: 저비용 단일 대상 냉기 투사체 (냉기 계열 1티어) */
+UCLASS()
+class ROH_API UROHAbility_IceBolt : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_IceBolt();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float BaseDamage = 16.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ProjectileSpeed = 1500.f;
+};
+
+/** 운석: 커서 지점에 1초 후 낙하하는 대형 화염 폭발 (화염 계열 상위기) */
+UCLASS()
+class ROH_API UROHAbility_Meteor : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_Meteor();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float BaseDamage = 60.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ImpactRadius = 300.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ImpactDelay = 1.f;
+};
+
+/** 눈보라: 커서 지점 반경에 3회 냉기 파동 + 둔화 (냉기 계열 상위기) */
+UCLASS()
+class ROH_API UROHAbility_Blizzard : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_Blizzard();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float DamagePerPulse = 18.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float Radius = 350.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	int32 PulseCount = 3;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float PulseInterval = 0.7f;
+};
+
+/**
+ * 정전기장: 주변 적의 현재 생명력 비례 번개 피해 (디아블로2 스태틱 필드 방식).
+ * 체력이 많은 적일수록 강력 — 보스전 오프너.
+ */
+UCLASS()
+class ROH_API UROHAbility_StaticField : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_StaticField();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float Radius = 400.f;
+
+	/** 현재 생명력 대비 기본 피해 비율 (랭크 배수 적용, 최대 50%) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float BaseHealthPercent = 0.2f;
+};

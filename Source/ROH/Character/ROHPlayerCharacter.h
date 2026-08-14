@@ -22,8 +22,13 @@ class ROH_API AROHPlayerCharacter : public AROHCharacterBase
 public:
 	AROHPlayerCharacter();
 
-	/** 슬롯 인덱스(DefaultAbilities 순서)로 어빌리티 발동. 0=기본공격, 1~3=스킬 */
+	/** 슬롯 인덱스(DefaultAbilities 순서)로 어빌리티 발동. 0=기본공격, 1~4=스킬 */
 	void ActivateAbilityBySlot(int32 SlotIndex);
+
+	/** 습득한 액티브 스킬을 슬롯(1~4)에 배치. 실패 사유는 OutError로 (콘솔 ROHBindSkill) */
+	bool BindSkillToSlot(int32 SlotIndex, FName SkillId, FString& OutError);
+
+	static constexpr int32 MaxSkillSlot = 4;
 
 	/** E 상호작용: 주변 드랍 습득 → 없으면 인벤토리 첫 장비 장착. NPC 대화 등으로 확장 예정 */
 	void Interact();

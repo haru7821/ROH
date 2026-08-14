@@ -346,11 +346,68 @@ void UROHCheatManager::ROHSkillInfo()
 		{
 			Requirement += FString::Printf(TEXT(", 선행 %s"), *Def.PrereqSkillId.ToString());
 		}
-		CheatPrint(FString::Printf(TEXT("%s (%s): 랭크 %d/%d [%s] 배수 x%.2f"),
-			*Def.SkillId.ToString(), *Def.DisplayName.ToString(),
-			SkillTree->GetRank(Def.SkillId), Def.MaxPoints, *Requirement,
-			SkillTree->GetDamageMultiplier(Def.SkillId)));
+
+		FString Detail;
+		if (Def.Kind == EROHSkillKind::Passive)
+		{
+			for (const FROHPassiveBonus& PassiveBonus : Def.PassiveBonuses)
+			{
+				Detail += FString::Printf(TEXT(" +%s %.0f/랭크"), *PassiveBonus.Attribute.GetName(), PassiveBonus.PerRank);
+			}
+		}
+		else
+		{
+			const float Multiplier = SkillTree->GetDamageMultiplier(Def.SkillId);
+			Detail = Multiplier > 0.f ? FString::Printf(TEXT(" 배수 x%.2f"), Multiplier) : TEXT(" 미습득");
+		}
+		if (!Def.Synergies.IsEmpty())
+		{
+			Detail += TEXT(" | 시너지:");
+			for (const FROHSkillSynergy& Synergy : Def.Synergies)
+			{
+				Detail += FString::Printf(TEXT(" %s +%.0f%%/pt"), *Synergy.SkillId.ToString(), Synergy.PerPointPercent);
+			}
+		}
+
+		CheatPrint(FString::Printf(TEXT("[%s] %s (%s, %s): 랭크 %d/%d [%s]%s"),
+			*Def.TreeName.ToString(), *Def.SkillId.ToString(), *Def.DisplayName.ToString(),
+			Def.Kind == EROHSkillKind::Passive ? TEXT("패시브") : TEXT("액티브"),
+			SkillTree->GetRank(Def.SkillId), Def.MaxPoints, *Requirement, *Detail));
 	}
+	CheatPrint(TEXT("액티브 스킬 배치: ROHBindSkill <슬롯 1~4> <SkillId> | 리스펙: ROHRespec"));
+}
+
+void UROHCheatManager::ROHBindSkill(int32 Slot, FName SkillId)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player)
+	{
+		return;
+	}
+	FString Error;
+	if (Player->BindSkillToSlot(Slot, SkillId, Error))
+	{
+		CheatPrint(FString::Printf(TEXT("슬롯 %d ← %s (키 %d로 발동)"), Slot, *SkillId.ToString(), Slot));
+	}
+	else
+	{
+		CheatPrint(FString::Printf(TEXT("배치 실패: %s"), *Error));
+	}
+}
+
+void UROHCheatManager::ROHRespec()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player || !Player->GetSkillTree() || !Player->GetProgression())
+	{
+		return;
+	}
+	const int32 Refunded = Player->GetSkillTree()->ResetAllPoints();
+	CheatPrint(Refunded > 0
+		? FString::Printf(TEXT("리스펙 완료: 스킬 포인트 %d 환불 (보유 %d)"), Refunded, Player->GetProgression()->GetSkillPoints())
+		: TEXT("환불할 스킬 포인트가 없습니다."));
 }
 
 void UROHCheatManager::ROHSetClass(FString ClassName)

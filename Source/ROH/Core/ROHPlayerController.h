@@ -33,12 +33,13 @@ protected:
 	void OnSkill1();
 	void OnSkill2();
 	void OnSkill3();
+	void OnSkill4();
 	void OnInteract();
 	void ActivateSlot(int32 SlotIndex);
 
 	/**
 	 * 코드로 입력을 생성한다 (키 배치의 단일 소스):
-	 * 좌클릭 이동 / 우클릭 기본공격 / 1·2·3 스킬 / E 상호작용.
+	 * 좌클릭 이동 / 우클릭 기본공격 / 1·2·3·4 스킬 / E 상호작용.
 	 * BP/애셋에 지정된 키가 있어도 코드 정의가 우선한다.
 	 * (플레이어 키 커스터마이즈 기능 도입 시 이 정책 재검토)
 	 */
@@ -54,7 +55,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> BasicAttackAction;
 
-	/** 스킬 1~3 (권장: 1/2/3) */
+	/** 스킬 1~4 (권장: 1/2/3/4) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> Skill1Action;
 
@@ -63,6 +64,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> Skill3Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> Skill4Action;
 
 	/** 상호작용: 주변 드랍 습득 → 없으면 장비 장착 (권장: E) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")

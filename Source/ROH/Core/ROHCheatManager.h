@@ -67,9 +67,17 @@ public:
 	UFUNCTION(Exec)
 	void ROHSkillUp(FName SkillId);
 
-	/** 스킬트리 현황 출력 (스킬 목록/랭크/요구 조건) */
+	/** 스킬트리 현황 출력 (계열/종류/랭크/요구 조건/시너지) */
 	UFUNCTION(Exec)
 	void ROHSkillInfo();
+
+	/** 습득한 액티브 스킬을 슬롯 1~4에 배치. 예: ROHBindSkill 4 StaticField */
+	UFUNCTION(Exec)
+	void ROHBindSkill(int32 Slot, FName SkillId);
+
+	/** 리스펙: 모든 스킬 포인트 환불 (그레이박스: 무제한. 정식은 난이도당 1회) */
+	UFUNCTION(Exec)
+	void ROHRespec();
 
 	/** 클래스 전환: warrior / elem. 예: ROHSetClass elem */
 	UFUNCTION(Exec)

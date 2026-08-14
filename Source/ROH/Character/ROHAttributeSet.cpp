@@ -49,6 +49,21 @@ void UROHAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, f
 	}
 }
 
+void UROHAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	Super::PostAttributeChange(Attribute, OldValue, NewValue);
+
+	// 최대치가 내려가면 현재값도 따라 내림 (리스펙/버프 해제 등으로 MaxHealth·MaxMana 하락 시)
+	if (Attribute == GetMaxHealthAttribute() && GetHealth() > NewValue)
+	{
+		SetHealth(FMath::Max(NewValue, 0.f));
+	}
+	else if (Attribute == GetMaxManaAttribute() && GetMana() > NewValue)
+	{
+		SetMana(FMath::Max(NewValue, 0.f));
+	}
+}
+
 void UROHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);

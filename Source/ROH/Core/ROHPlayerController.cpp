@@ -66,10 +66,11 @@ void AROHPlayerController::BuildRuntimeInput()
 	Skill1Action = MakeAction(TEXT("IA_Skill1_Runtime"), EKeys::One);
 	Skill2Action = MakeAction(TEXT("IA_Skill2_Runtime"), EKeys::Two);
 	Skill3Action = MakeAction(TEXT("IA_Skill3_Runtime"), EKeys::Three);
+	Skill4Action = MakeAction(TEXT("IA_Skill4_Runtime"), EKeys::Four);
 	InteractAction = MakeAction(TEXT("IA_Interact_Runtime"), EKeys::E);
 	DefaultMappingContext = RuntimeIMC;
 
-	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3 스킬 / E 상호작용)"));
+	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3·4 스킬 / E 상호작용)"));
 }
 
 void AROHPlayerController::SetupInputComponent()
@@ -102,6 +103,10 @@ void AROHPlayerController::SetupInputComponent()
 		if (Skill3Action)
 		{
 			EIC->BindAction(Skill3Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill3);
+		}
+		if (Skill4Action)
+		{
+			EIC->BindAction(Skill4Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill4);
 		}
 		if (InteractAction)
 		{
@@ -136,6 +141,11 @@ void AROHPlayerController::OnSkill2()
 void AROHPlayerController::OnSkill3()
 {
 	ActivateSlot(3);
+}
+
+void AROHPlayerController::OnSkill4()
+{
+	ActivateSlot(4);
 }
 
 void AROHPlayerController::ActivateSlot(int32 SlotIndex)

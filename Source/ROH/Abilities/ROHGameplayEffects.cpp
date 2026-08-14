@@ -42,3 +42,24 @@ UROHSlowEffect::UROHSlowEffect()
 	SlowModifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-250.f));
 	Modifiers.Add(SlowModifier);
 }
+
+UROHBattleShoutEffect::UROHBattleShoutEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
+
+	auto AddSetByCallerModifier = [this](const FGameplayAttribute& Attribute, const FGameplayTag& DataTag)
+	{
+		FSetByCallerFloat SetByCaller;
+		SetByCaller.DataTag = DataTag;
+
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Attribute;
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
+		Modifiers.Add(Modifier);
+	};
+
+	AddSetByCallerModifier(UROHAttributeSet::GetAttackPowerAttribute(), ROHGameplayTags::Data_BuffAttackPower);
+	AddSetByCallerModifier(UROHAttributeSet::GetDefenseAttribute(), ROHGameplayTags::Data_BuffDefense);
+}

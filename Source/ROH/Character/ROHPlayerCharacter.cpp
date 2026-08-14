@@ -3,6 +3,7 @@
 #include "Items/ROHInventoryComponent.h"
 #include "Loot/ROHItemPickup.h"
 #include "Abilities/ROHAbilitySystemComponent.h"
+#include "Abilities/ROHGameplayAbility.h" // TSubclassOf<UROHGameplayAbility> 변환에 완전한 타입 필요 (유니티 빌드 의존 금지)
 #include "EngineUtils.h"
 #include "Engine/Engine.h"
 #include "Progression/ROHProgressionComponent.h"
@@ -60,6 +61,50 @@ void AROHPlayerCharacter::ActivateAbilityBySlot(int32 SlotIndex)
 		return;
 	}
 	AbilitySystemComponent->TryActivateAbilityByClass(DefaultAbilities[SlotIndex]);
+}
+
+bool AROHPlayerCharacter::BindSkillToSlot(int32 SlotIndex, FName SkillId, FString& OutError)
+{
+	if (SlotIndex < 1 || SlotIndex > MaxSkillSlot)
+	{
+		OutError = FString::Printf(TEXT("슬롯은 1~%d 입니다."), MaxSkillSlot);
+		return false;
+	}
+	if (!SkillTree)
+	{
+		OutError = TEXT("스킬트리 컴포넌트가 없습니다.");
+		return false;
+	}
+
+	const FROHSkillDef* Def = UROHSkillTreeComponent::FindSkillDef(SkillTree->GetPlayerClass(), SkillId);
+	if (!Def)
+	{
+		OutError = TEXT("알 수 없는 스킬입니다. ROHSkillInfo로 목록을 확인하세요.");
+		return false;
+	}
+	if (Def->Kind != EROHSkillKind::Active || !Def->AbilityClass)
+	{
+		OutError = TEXT("패시브 스킬은 슬롯에 배치할 수 없습니다.");
+		return false;
+	}
+	if (SkillTree->GetRank(SkillId) < 1)
+	{
+		OutError = FString::Printf(TEXT("먼저 습득하세요: ROHSkillUp %s"), *SkillId.ToString());
+		return false;
+	}
+
+	// 아직 부여되지 않은 어빌리티면 부여 (기본 슬롯 외 스킬)
+	if (AbilitySystemComponent && !AbilitySystemComponent->FindAbilitySpecFromClass(Def->AbilityClass))
+	{
+		GrantAbility(Def->AbilityClass);
+	}
+
+	if (DefaultAbilities.Num() <= SlotIndex)
+	{
+		DefaultAbilities.SetNum(SlotIndex + 1);
+	}
+	DefaultAbilities[SlotIndex] = Def->AbilityClass;
+	return true;
 }
 
 void AROHPlayerCharacter::Tick(float DeltaSeconds)

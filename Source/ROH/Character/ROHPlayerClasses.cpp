@@ -4,6 +4,7 @@
 #include "Abilities/Warrior/ROHAbility_Bash.h"
 #include "Abilities/Warrior/ROHAbility_Whirlwind.h"
 #include "Abilities/Warrior/ROHAbility_LeapAttack.h"
+#include "Abilities/Warrior/ROHAbility_Execute.h"
 #include "Abilities/Elementalist/ROHElementalistAbilities.h"
 
 AROHWarriorCharacter::AROHWarriorCharacter()
@@ -19,6 +20,7 @@ AROHWarriorCharacter::AROHWarriorCharacter()
 	DefaultAbilities.Add(UROHAbility_Bash::StaticClass());
 	DefaultAbilities.Add(UROHAbility_Whirlwind::StaticClass());
 	DefaultAbilities.Add(UROHAbility_LeapAttack::StaticClass());
+	DefaultAbilities.Add(UROHAbility_Execute::StaticClass()); // 슬롯4 기본 (ROHBindSkill로 교체 가능)
 
 	GetSkillTree()->SetPlayerClass(EROHPlayerClass::Warrior);
 }
@@ -36,6 +38,7 @@ AROHElementalistCharacter::AROHElementalistCharacter()
 	DefaultAbilities.Add(UROHAbility_Fireball::StaticClass());
 	DefaultAbilities.Add(UROHAbility_FrostNova::StaticClass());
 	DefaultAbilities.Add(UROHAbility_Teleport::StaticClass());
+	DefaultAbilities.Add(UROHAbility_Meteor::StaticClass()); // 슬롯4 기본 (ROHBindSkill로 교체 가능)
 
 	GetSkillTree()->SetPlayerClass(EROHPlayerClass::Elementalist);
 }

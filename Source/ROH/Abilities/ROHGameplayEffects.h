@@ -41,3 +41,19 @@ class ROH_API UROHSlowEffect : public UGameplayEffect
 public:
 	UROHSlowEffect();
 };
+
+/**
+ * 전투의 함성 버프: 15초간 공격력/방어 증가.
+ * 증가량은 SetByCaller(Data.Buff.AttackPower / Data.Buff.Defense)로 전달 (랭크·시너지 배수 반영).
+ * 재시전 시 어빌리티가 기존 효과를 제거 후 새로 적용한다 (중첩 방지).
+ */
+UCLASS()
+class ROH_API UROHBattleShoutEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UROHBattleShoutEffect();
+
+	static constexpr float Duration = 15.f;
+};
