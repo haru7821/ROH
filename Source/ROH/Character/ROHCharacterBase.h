@@ -10,6 +10,7 @@ class UROHAbilitySystemComponent;
 class UROHAttributeSet;
 class UROHGameplayAbility;
 class UStaticMeshComponent;
+struct FOnAttributeChangeData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FROHDeathSignature, AROHCharacterBase*, DeadCharacter);
 
@@ -55,6 +56,9 @@ protected:
 	void GrantDefaultAbilities();
 	FGameplayAbilitySpecHandle GrantAbility(TSubclassOf<UROHGameplayAbility> AbilityClass);
 
+	/** MoveSpeed 어트리뷰트 변경을 CharacterMovement에 반영 */
+	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
+
 	UPROPERTY(VisibleAnywhere, Category = "ROH|Abilities")
 	TObjectPtr<UROHAbilitySystemComponent> AbilitySystemComponent;
 
@@ -96,4 +100,5 @@ protected:
 
 private:
 	bool bAbilitiesGranted = false;
+	bool bAttributeDelegatesBound = false;
 };

@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/World.h"
+#include "Engine/OverlapResult.h"
 #include "TimerManager.h"
 #include "ROH.h"
 

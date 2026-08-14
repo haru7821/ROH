@@ -3,6 +3,7 @@
 #include "Abilities/ROHGameplayAbility.h"
 #include "Character/ROHAttributeSet.h"
 #include "ROHGameplayTags.h"
+#include "GameplayEffectTypes.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -64,6 +65,18 @@ void AROHCharacterBase::InitAbilityActorInfo()
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	InitializeAttributes();
 	GrantDefaultAbilities();
+
+	if (!bAttributeDelegatesBound)
+	{
+		bAttributeDelegatesBound = true;
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UROHAttributeSet::GetMoveSpeedAttribute())
+			.AddUObject(this, &AROHCharacterBase::OnMoveSpeedChanged);
+	}
+}
+
+void AROHCharacterBase::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
 }
 
 void AROHCharacterBase::InitializeAttributes()

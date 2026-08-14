@@ -51,11 +51,12 @@ void UROHAbility_LeapAttack::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	Character->LandedDelegate.AddDynamic(this, &UROHAbility_LeapAttack::OnLanded);
 	Character->LaunchCharacter(HorizontalVelocity + FVector(0.f, 0.f, VerticalVelocity), true, true);
 
-	// 착지 이벤트를 못 받는 경우 대비 안전 타이머
-	Character->GetWorld()->GetTimerManager().SetTimer(SafetyTimerHandle, [this]()
-	{
-		DoImpact();
-	}, LeapTime * 3.f, false);
+	// 착지 이벤트를 못 받는 경우 대비 안전 타이머 (약참조 캡처: 어빌리티 파괴 후 발화 방지)
+	Character->GetWorld()->GetTimerManager().SetTimer(SafetyTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this, [this]()
+		{
+			DoImpact();
+		}), LeapTime * 3.f, false);
 }
 
 void UROHAbility_LeapAttack::OnLanded(const FHitResult& Hit)
@@ -97,10 +98,11 @@ void UROHAbility_LeapAttack::EndAbility(const FGameplayAbilitySpecHandle Handle,
 	if (AROHCharacterBase* Character = GetROHCharacter())
 	{
 		Character->LandedDelegate.RemoveDynamic(this, &UROHAbility_LeapAttack::OnLanded);
-		if (Character->GetWorld())
-		{
-			Character->GetWorld()->GetTimerManager().ClearTimer(SafetyTimerHandle);
-		}
+	}
+	// 아바타가 이미 무효한 경우에도 타이머는 반드시 해제
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(SafetyTimerHandle);
 	}
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

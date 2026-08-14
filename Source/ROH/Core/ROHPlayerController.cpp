@@ -6,6 +6,8 @@
 #include "InputMappingContext.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "GameFramework/Pawn.h"
+#include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
 #include "ROH.h"
 
 AROHPlayerController::AROHPlayerController()

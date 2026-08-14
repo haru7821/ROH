@@ -12,6 +12,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/World.h"
 
 AROHPlayerCharacter::AROHPlayerCharacter()
 {

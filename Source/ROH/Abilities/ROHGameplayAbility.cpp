@@ -5,6 +5,7 @@
 #include "ROHGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"

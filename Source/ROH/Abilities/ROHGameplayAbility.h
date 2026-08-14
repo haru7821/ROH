@@ -7,6 +7,8 @@
 
 class AROHCharacterBase;
 class UNiagaraSystem;
+class USoundBase;
+class UCameraShakeBase;
 
 /**
  * 모든 스킬의 베이스 (docs/03 §1).

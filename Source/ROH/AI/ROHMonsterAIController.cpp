@@ -30,6 +30,8 @@ void AROHMonsterAIController::Tick(float DeltaSeconds)
 	AROHCharacterBase* Target = FindPlayerTarget();
 	if (!Target)
 	{
+		// 플레이어 사망/부재 시 어그로 해제 (부활 지점까지 추격 방지)
+		bAggroed = false;
 		StopMovement();
 		return;
 	}
@@ -50,7 +52,21 @@ void AROHMonsterAIController::Tick(float DeltaSeconds)
 	const bool bRanged = Monster->GetPreferredRange() > 0.f;
 	const float DesiredRange = bRanged ? Monster->GetPreferredRange() : Monster->GetAttackRange() * 0.8f;
 
-	if (Distance > DesiredRange)
+	if (bRanged && Distance < DesiredRange * 0.6f)
+	{
+		// 원거리형: 너무 가까우면 후퇴하며 거리 유지
+		if (Now - LastRepathTime > 0.25f)
+		{
+			const FVector Away = (Monster->GetActorLocation() - Target->GetActorLocation()).GetSafeNormal2D();
+			MoveToLocation(Monster->GetActorLocation() + Away * 400.f, 50.f);
+			LastRepathTime = Now;
+		}
+		if (Distance <= Monster->GetAttackRange())
+		{
+			TryAttack(Monster, Target);
+		}
+	}
+	else if (Distance > DesiredRange)
 	{
 		// 이동 경로 갱신은 0.25초마다 (매 틱 재탐색 방지)
 		if (Now - LastRepathTime > 0.25f)

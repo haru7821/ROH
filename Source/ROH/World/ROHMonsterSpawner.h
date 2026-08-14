@@ -26,6 +26,7 @@ protected:
 	UFUNCTION()
 	void OnMonsterDeath(AROHCharacterBase* DeadCharacter);
 
+	void SpawnInitialBatch();
 	void SpawnOne();
 
 	/** 스폰할 몬스터 종류 (순환 스폰) */

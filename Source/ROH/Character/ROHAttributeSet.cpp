@@ -92,4 +92,8 @@ void UROHAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbac
 	{
 		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
 	}
+	else if (Data.EvaluatedData.Attribute == GetMaxRageAttribute())
+	{
+		SetRage(FMath::Clamp(GetRage(), 0.f, GetMaxRage()));
+	}
 }

@@ -18,6 +18,13 @@ void AROHMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 내비게이션 데이터 로드가 끝난 뒤 초기 스폰 (첫 프레임엔 랜덤 지점 탐색이 실패할 수 있음)
+	FTimerHandle InitialSpawnHandle;
+	GetWorld()->GetTimerManager().SetTimer(InitialSpawnHandle, this, &AROHMonsterSpawner::SpawnInitialBatch, 0.5f, false);
+}
+
+void AROHMonsterSpawner::SpawnInitialBatch()
+{
 	for (int32 i = 0; i < MaxAlive; ++i)
 	{
 		SpawnOne();
