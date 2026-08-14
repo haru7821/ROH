@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  push:
+    branches: [ROH]
+  workflow_dispatch:
+
+jobs:
+  build-editor:
+    # 회원님 PC에 등록된 self-hosted runner에서 실행 (docs/09 참고)
+    runs-on: [self-hosted, Windows]
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          clean: false   # Intermediate/ 유지 → 증분 빌드로 시간 단축
+
+      - name: Build ROHEditor (Development Win64)
+        shell: cmd
+        env:
+          # 엔진 설치 경로가 다르면 저장소 Settings > Secrets and variables > Actions > Variables 에
+          # UE_PATH 변수로 지정 (예: D:\Epic\UE_5.8)
+          UE_PATH: ${{ vars.UE_PATH != '' && vars.UE_PATH || 'C:\Program Files\Epic Games\UE_5.8' }}
+        run: |
+          "%UE_PATH%\Engine\Build\BatchFiles\Build.bat" ROHEditor Win64 Development -project="%GITHUB_WORKSPACE%\ROH.uproject" -WaitMutex
