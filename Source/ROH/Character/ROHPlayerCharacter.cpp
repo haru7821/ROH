@@ -69,10 +69,12 @@ void AROHPlayerCharacter::Tick(float DeltaSeconds)
 	// 성장 상태 표시 (좌상단 두 번째 줄)
 	if (GEngine && IsPlayerControlled() && Progression)
 	{
+		const FString XPText = Progression->GetLevel() >= UROHProgressionComponent::MaxLevel
+			? TEXT("MAX")
+			: FString::Printf(TEXT("%d/%d"), Progression->GetXP(), UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()));
 		GEngine->AddOnScreenDebugMessage(5, 0.5f, FColor::White,
-			FString::Printf(TEXT("Lv %d | XP %d/%d | 스탯P %d | 스킬P %d | 골드 %d"),
-				Progression->GetLevel(), Progression->GetXP(),
-				UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()),
+			FString::Printf(TEXT("Lv %d | XP %s | 스탯P %d | 스킬P %d | 골드 %d"),
+				Progression->GetLevel(), *XPText,
 				Progression->GetStatPoints(), Progression->GetSkillPoints(),
 				Inventory ? Inventory->GetGold() : 0));
 	}

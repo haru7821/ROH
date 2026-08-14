@@ -36,9 +36,21 @@ AROHPlayerCharacter* AROHGameMode::RespawnPlayerAs(APlayerController* PlayerCont
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	AROHPlayerCharacter* NewPawn = GetWorld()->SpawnActor<AROHPlayerCharacter>(NewClass, SpawnTransform, SpawnParams);
+	if (!NewPawn)
+	{
+		// 원래 위치 스폰 실패 시 플레이어 스타트에서 재시도
+		if (const AActor* Start = FindPlayerStart(PlayerController))
+		{
+			NewPawn = GetWorld()->SpawnActor<AROHPlayerCharacter>(NewClass, Start->GetActorTransform(), SpawnParams);
+		}
+	}
 	if (NewPawn)
 	{
 		PlayerController->Possess(NewPawn);
+	}
+	else
+	{
+		UE_LOG(LogROH, Error, TEXT("RespawnPlayerAs: 폰 스폰 실패 (%s)"), *GetNameSafe(NewClass));
 	}
 	return NewPawn;
 }

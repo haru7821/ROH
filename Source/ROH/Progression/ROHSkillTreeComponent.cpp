@@ -27,7 +27,7 @@ namespace
 	}
 }
 
-const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass PlayerClass)
+const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass InPlayerClass)
 {
 	// M3 1차: 클래스당 3스킬 (트리 전체 확장은 M3 후속 — docs/02 §2.1)
 	static const TArray<FROHSkillDef> WarriorSkills = {
@@ -47,12 +47,12 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 		MakeSkill(TEXT("Teleport"), TEXT("텔레포트"), EROHPlayerClass::Elementalist, 12, NAME_None, {}),
 	};
 
-	return PlayerClass == EROHPlayerClass::Warrior ? WarriorSkills : ElementalistSkills;
+	return InPlayerClass == EROHPlayerClass::Warrior ? WarriorSkills : ElementalistSkills;
 }
 
-const FROHSkillDef* UROHSkillTreeComponent::FindSkillDef(EROHPlayerClass PlayerClass, FName SkillId)
+const FROHSkillDef* UROHSkillTreeComponent::FindSkillDef(EROHPlayerClass InPlayerClass, FName SkillId)
 {
-	for (const FROHSkillDef& Def : GetSkillDefs(PlayerClass))
+	for (const FROHSkillDef& Def : GetSkillDefs(InPlayerClass))
 	{
 		if (Def.SkillId == SkillId)
 		{

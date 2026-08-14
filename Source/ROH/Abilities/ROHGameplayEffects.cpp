@@ -31,6 +31,11 @@ UROHSlowEffect::UROHSlowEffect()
 	DurationPolicy = EGameplayEffectDurationType::HasDuration;
 	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(3.f));
 
+	// 재적용 시 지속시간 갱신 (중첩 -500 둔화 방지)
+	StackingType = EGameplayEffectStackingType::AggregateByTarget;
+	StackLimitCount = 1;
+	StackDurationRefreshPolicy = EGameplayEffectStackingDurationPolicy::RefreshOnSuccessfulApplication;
+
 	FGameplayModifierInfo SlowModifier;
 	SlowModifier.Attribute = UROHAttributeSet::GetMoveSpeedAttribute();
 	SlowModifier.ModifierOp = EGameplayModOp::Additive;

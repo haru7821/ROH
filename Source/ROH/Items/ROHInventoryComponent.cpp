@@ -225,7 +225,12 @@ void UROHInventoryComponent::RestoreState(const TArray<FROHItemInstance>& InItem
 	for (const auto& Pair : InEquipped)
 	{
 		Items.Add(Pair.Value);
-		EquipItemByIndex(Items.Num() - 1);
+		if (!EquipItemByIndex(Items.Num() - 1))
+		{
+			// 장착 불가(데이터 변경 등) 아이템이 용량 초과로 남는 것 방지
+			UE_LOG(LogROH, Warning, TEXT("세이브 장착 복원 실패: %s — 아이템 제거"), *Pair.Value.BaseId.ToString());
+			Items.Pop();
+		}
 	}
 }
 

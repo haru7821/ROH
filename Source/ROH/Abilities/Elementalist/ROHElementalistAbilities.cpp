@@ -11,7 +11,7 @@
 namespace
 {
 	/** 커서 방향으로 투사체 스폰 (원소술사 공용) */
-	AROHProjectile* SpawnProjectileTowardCursor(UROHGameplayAbility& Ability, AROHCharacterBase* Caster,
+	AROHProjectile* SpawnProjectileTowardCursor(AROHCharacterBase* Caster,
 		const FVector& AimPoint, const FROHDamageParams& Damage, float Speed, float ExplosionRadius)
 	{
 		UWorld* World = Caster ? Caster->GetWorld() : nullptr;
@@ -67,7 +67,7 @@ void UROHAbility_MagicBolt::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		Damage.LightningDamage = BaseDamage * (1.f + Energy * 0.01f);
 		Damage.bUseAttackRoll = false;
 
-		SpawnProjectileTowardCursor(*this, Caster, Aim, Damage, ProjectileSpeed, 0.f);
+		SpawnProjectileTowardCursor(Caster, Aim, Damage, ProjectileSpeed, 0.f);
 	}
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -109,7 +109,7 @@ void UROHAbility_Fireball::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		Damage.FireDamage = BaseDamage * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
-		SpawnProjectileTowardCursor(*this, Caster, Aim, Damage, ProjectileSpeed, ExplosionRadius);
+		SpawnProjectileTowardCursor(Caster, Aim, Damage, ProjectileSpeed, ExplosionRadius);
 	}
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
@@ -185,27 +185,36 @@ void UROHAbility_Teleport::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+
+	AROHCharacterBase* Caster = GetROHCharacter();
+	if (!Caster)
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	AROHCharacterBase* Caster = GetROHCharacter();
-	if (Caster)
-	{
-		const FVector Start = Caster->GetActorLocation();
-		FVector Target = GetCursorLocation();
-		Target.Z = Start.Z;
+	const FVector Start = Caster->GetActorLocation();
+	FVector Target = GetCursorLocation();
+	Target.Z = Start.Z;
 
-		FVector Delta = Target - Start;
-		if (Delta.SizeSquared() > FMath::Square(MaxDistance))
-		{
-			Delta = Delta.GetSafeNormal() * MaxDistance;
-		}
-		FaceLocation(Start + Delta);
-		// 벽 안으로 끼지 않게 안전 텔레포트 (실패 시 제자리)
-		Caster->TeleportTo(Start + Delta, Caster->GetActorRotation());
+	FVector Delta = Target - Start;
+	if (Delta.SizeSquared() > FMath::Square(MaxDistance))
+	{
+		Delta = Delta.GetSafeNormal() * MaxDistance;
+	}
+
+	// 목적지가 막혀 이동에 실패하면 비용/쿨다운을 소모하지 않는다
+	if (!Caster->TeleportTo(Start + Delta, Caster->GetActorRotation()))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	FaceLocation(Start + Delta);
+
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
 	}
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);

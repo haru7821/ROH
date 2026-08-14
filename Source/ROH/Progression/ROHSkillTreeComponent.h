@@ -66,8 +66,8 @@ class ROH_API UROHSkillTreeComponent : public UActorComponent
 
 public:
 	/** 클래스별 스킬 정의 목록 */
-	static const TArray<FROHSkillDef>& GetSkillDefs(EROHPlayerClass PlayerClass);
-	static const FROHSkillDef* FindSkillDef(EROHPlayerClass PlayerClass, FName SkillId);
+	static const TArray<FROHSkillDef>& GetSkillDefs(EROHPlayerClass InPlayerClass);
+	static const FROHSkillDef* FindSkillDef(EROHPlayerClass InPlayerClass, FName SkillId);
 
 	void SetPlayerClass(EROHPlayerClass InClass) { PlayerClass = InClass; }
 	EROHPlayerClass GetPlayerClass() const { return PlayerClass; }
