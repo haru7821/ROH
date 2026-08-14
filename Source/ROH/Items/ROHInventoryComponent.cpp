@@ -83,10 +83,13 @@ bool UROHInventoryComponent::EquipFirstEquippable()
 	{
 		return false;
 	}
+	// 비어 있는 슬롯에 들어갈 장비만 대상 (기존 장비와의 무한 맞교환 방지 —
+	// 교체는 콘솔 ROHEquip / 추후 인벤토리 UI에서)
 	for (int32 i = 0; i < Items.Num(); ++i)
 	{
 		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
-		if (Base && Base->Kind == EROHItemKind::Equipment && Base->Slot != EROHEquipSlot::None)
+		if (Base && Base->Kind == EROHItemKind::Equipment && Base->Slot != EROHEquipSlot::None
+			&& !Equipped.Contains(Base->Slot))
 		{
 			return EquipItemByIndex(i);
 		}
