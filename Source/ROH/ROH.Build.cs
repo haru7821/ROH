@@ -6,6 +6,9 @@ public class ROH : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		// 모듈 루트를 include 경로로 등록 — "Abilities/..." 식 include의 기준 경로
+		PublicIncludePaths.Add(ModuleDirectory);
+
 		PublicDependencyModuleNames.AddRange(new string[]
 		{
 			"Core",
