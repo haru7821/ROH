@@ -1,6 +1,18 @@
 #include "Items/ROHItemDatabase.h"
 #include "Character/ROHAttributeSet.h"
+#include "HAL/PlatformTime.h"
 #include "ROH.h"
+#include <initializer_list>
+
+namespace
+{
+	// FMath::Rand()는 상태 공간이 ~32767뿐이라 시드로 부적합 → 사이클 카운터와 결합
+	int32 MakeRandomSeed()
+	{
+		const int32 Seed = static_cast<int32>(FPlatformTime::Cycles() & 0x7fffffff) ^ (FMath::Rand() << 16);
+		return Seed != 0 ? Seed : 1;
+	}
+}
 
 void UROHItemDatabase::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -187,7 +199,7 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 	Instance.BaseId = BaseId;
 	Instance.ItemLevel = FMath::Max(1, ItemLevel);
 	Instance.Quality = (Base->Kind == EROHItemKind::Equipment) ? Quality : EROHItemQuality::Normal;
-	Instance.Seed = (Seed != 0) ? Seed : FMath::Rand();
+	Instance.Seed = (Seed != 0) ? Seed : MakeRandomSeed();
 
 	if (Base->Kind == EROHItemKind::Equipment && Instance.Quality != EROHItemQuality::Normal)
 	{
@@ -201,6 +213,7 @@ void UROHItemDatabase::RollAffixes(FROHItemInstance& Instance, const FROHItemBas
 {
 	int32 NumPrefixes = 0;
 	int32 NumSuffixes = 0;
+	int32 MinTotal = 0;
 
 	if (Instance.Quality == EROHItemQuality::Magic)
 	{
@@ -211,6 +224,7 @@ void UROHItemDatabase::RollAffixes(FROHItemInstance& Instance, const FROHItemBas
 		{
 			(Rng.FRand() < 0.5f ? NumPrefixes : NumSuffixes) = 1;
 		}
+		MinTotal = 1;
 	}
 	else if (Instance.Quality == EROHItemQuality::Rare)
 	{
@@ -218,11 +232,14 @@ void UROHItemDatabase::RollAffixes(FROHItemInstance& Instance, const FROHItemBas
 		const int32 Total = Rng.RandRange(3, 6);
 		NumPrefixes = FMath::Clamp(Rng.RandRange(1, Total - 1), 1, 3);
 		NumSuffixes = FMath::Clamp(Total - NumPrefixes, 1, 3);
+		MinTotal = 3;
 	}
 
-	auto RollFromPool = [&](bool bPrefix, int32 Count)
+	TArray<const FROHAffixDef*> PrefixPool = GetEligibleAffixes(Base, Instance.ItemLevel, true);
+	TArray<const FROHAffixDef*> SuffixPool = GetEligibleAffixes(Base, Instance.ItemLevel, false);
+
+	auto RollFromPool = [&](TArray<const FROHAffixDef*>& Pool, int32 Count)
 	{
-		TArray<const FROHAffixDef*> Pool = GetEligibleAffixes(Base, Instance.ItemLevel, bPrefix);
 		for (int32 i = 0; i < Count && Pool.Num() > 0; ++i)
 		{
 			const int32 PickIndex = Rng.RandRange(0, Pool.Num() - 1);
@@ -237,8 +254,14 @@ void UROHItemDatabase::RollAffixes(FROHItemInstance& Instance, const FROHItemBas
 		}
 	};
 
-	RollFromPool(true, NumPrefixes);
-	RollFromPool(false, NumSuffixes);
+	RollFromPool(PrefixPool, NumPrefixes);
+	RollFromPool(SuffixPool, NumSuffixes);
+
+	// 저레벨 등에서 한쪽 풀이 부족해 최소 개수 미달이면 반대쪽 풀에서 보충
+	while (Instance.Affixes.Num() < MinTotal && (PrefixPool.Num() + SuffixPool.Num()) > 0)
+	{
+		RollFromPool(PrefixPool.Num() > 0 ? PrefixPool : SuffixPool, 1);
+	}
 }
 
 TArray<const FROHAffixDef*> UROHItemDatabase::GetEligibleAffixes(const FROHItemBaseDef& Base, int32 ItemLevel, bool bPrefix) const
@@ -271,7 +294,7 @@ FROHDropResult UROHItemDatabase::RollTreasureClass(FName TCId, int32 ItemLevel, 
 		return Result;
 	}
 
-	FRandomStream Rng(FMath::Rand());
+	FRandomStream Rng(MakeRandomSeed());
 
 	for (int32 Pick = 0; Pick < TC->Picks; ++Pick)
 	{

@@ -1,6 +1,7 @@
 #include "Items/ROHInventoryComponent.h"
 #include "Items/ROHItemDatabase.h"
 #include "Character/ROHAttributeSet.h"
+#include "Character/ROHCharacterBase.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffect.h"
@@ -100,8 +101,8 @@ void UROHInventoryComponent::ApplyEquipEffect(EROHEquipSlot Slot, const FROHItem
 	}
 
 	// 런타임 GE 구성: 베이스 성능 + 접사 전부 Additive 모디파이어로
-	UGameplayEffect* EquipEffect = NewObject<UGameplayEffect>(
-		GetTransientPackage(), FName(*FString::Printf(TEXT("GE_Equip_%s"), *Item.BaseId.ToString())));
+	// (이름은 자동 유니크 — 고정 이름은 동명 객체를 in-place 교체해 활성 GE를 파괴할 위험)
+	UGameplayEffect* EquipEffect = NewObject<UGameplayEffect>(GetTransientPackage());
 	EquipEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
 
 	auto AddModifier = [EquipEffect](const FGameplayAttribute& Attribute, float Value)
@@ -157,10 +158,19 @@ bool UROHInventoryComponent::UseFirstPotion()
 		return false;
 	}
 
+	// 죽은 상태에서는 사용 불가
+	if (const AROHCharacterBase* OwnerCharacter = Cast<AROHCharacterBase>(GetOwner()))
+	{
+		if (!OwnerCharacter->IsAlive())
+		{
+			return false;
+		}
+	}
+
 	for (int32 i = 0; i < Items.Num(); ++i)
 	{
 		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
-		if (Base && Base->Kind == EROHItemKind::Potion)
+		if (Base && Base->Kind == EROHItemKind::Potion && Base->PotionHealAmount > 0.f)
 		{
 			ASC->ApplyModToAttribute(UROHAttributeSet::GetHealthAttribute(), EGameplayModOp::Additive, Base->PotionHealAmount);
 			Items.RemoveAt(i);

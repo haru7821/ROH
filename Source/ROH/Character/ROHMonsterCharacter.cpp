@@ -57,9 +57,6 @@ void AROHMonsterCharacter::DropLoot(AActor* Killer)
 	const int32 ItemLevel = AttributeSet ? FMath::RoundToInt(AttributeSet->GetCharacterLevel()) : 1;
 	const FROHDropResult Drops = Database->RollTreasureClass(TreasureClassId, ItemLevel, MagicFind);
 
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
 	int32 SpawnIndex = 0;
 	auto NextDropLocation = [this, &SpawnIndex]()
 	{
@@ -73,18 +70,24 @@ void AROHMonsterCharacter::DropLoot(AActor* Killer)
 			0.f);
 	};
 
+	// 지연 스폰: 내용물 설정 후 FinishSpawning — 스폰 순간 겹쳐 있던 플레이어의 오버랩이
+	// 초기화 전에 발화해 습득 불가로 남는 문제 방지
 	for (const FROHItemInstance& Item : Drops.Items)
 	{
-		if (AROHItemPickup* Pickup = World->SpawnActor<AROHItemPickup>(AROHItemPickup::StaticClass(), NextDropLocation(), FRotator::ZeroRotator, SpawnParams))
+		const FTransform SpawnTransform(FRotator::ZeroRotator, NextDropLocation());
+		if (AROHItemPickup* Pickup = World->SpawnActorDeferred<AROHItemPickup>(AROHItemPickup::StaticClass(), SpawnTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
 			Pickup->InitAsItem(Item);
+			Pickup->FinishSpawning(SpawnTransform);
 		}
 	}
 	if (Drops.Gold > 0)
 	{
-		if (AROHItemPickup* Pickup = World->SpawnActor<AROHItemPickup>(AROHItemPickup::StaticClass(), NextDropLocation(), FRotator::ZeroRotator, SpawnParams))
+		const FTransform SpawnTransform(FRotator::ZeroRotator, NextDropLocation());
+		if (AROHItemPickup* Pickup = World->SpawnActorDeferred<AROHItemPickup>(AROHItemPickup::StaticClass(), SpawnTransform, nullptr, nullptr, ESpawnActorCollisionHandlingMethod::AlwaysSpawn))
 		{
 			Pickup->InitAsGold(Drops.Gold);
+			Pickup->FinishSpawning(SpawnTransform);
 		}
 	}
 }

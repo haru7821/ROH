@@ -211,12 +211,21 @@ void UROHCheatManager::ROHBuyPotion()
 	{
 		return;
 	}
+	if (Inventory->IsFull())
+	{
+		CheatPrint(TEXT("인벤토리가 가득 찼습니다"));
+		return;
+	}
 	if (!Inventory->SpendGold(PotionBase->GoldValue))
 	{
 		CheatPrint(FString::Printf(TEXT("골드 부족 (필요: %d)"), PotionBase->GoldValue));
 		return;
 	}
-	Inventory->AddItem(Database->GenerateItem(TEXT("HealthPotion"), 1, EROHItemQuality::Normal));
+	if (!Inventory->AddItem(Database->GenerateItem(TEXT("HealthPotion"), 1, EROHItemQuality::Normal)))
+	{
+		Inventory->AddGold(PotionBase->GoldValue); // 실패 시 환불
+		return;
+	}
 	CheatPrint(FString::Printf(TEXT("치유물약 구매 (-%d 골드, 잔액 %d)"), PotionBase->GoldValue, Inventory->GetGold()));
 }
 

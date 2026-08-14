@@ -10,7 +10,7 @@
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FROHDropSimulatorTest,
 	"ROH.Loot.DropSimulator",
-	EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+	EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
 
 bool FROHDropSimulatorTest::RunTest(const FString& Parameters)
 {
