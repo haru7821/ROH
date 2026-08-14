@@ -3,7 +3,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "UObject/ConstructorHelpers.h"
+#include "Engine/StaticMesh.h"
 
 AROHProjectile::AROHProjectile()
 {
@@ -22,18 +22,27 @@ AROHProjectile::AROHProjectile()
 	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualMesh"));
 	VisualMesh->SetupAttachment(CollisionSphere);
 	VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereMesh(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	if (SphereMesh.Succeeded())
-	{
-		VisualMesh->SetStaticMesh(SphereMesh.Object);
-		VisualMesh->SetRelativeScale3D(FVector(0.25f));
-	}
+	VisualMesh->SetRelativeScale3D(FVector(0.25f));
 
 	ProjectileMovement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovement"));
 	ProjectileMovement->ProjectileGravityScale = 0.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 
 	CollisionSphere->OnComponentBeginOverlap.AddDynamic(this, &AROHProjectile::OnSphereOverlap);
+}
+
+void AROHProjectile::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 생성자 시점엔 엔진 콘텐츠가 마운트되지 않아 여기서 로드
+	if (VisualMesh && !VisualMesh->GetStaticMesh())
+	{
+		if (UStaticMesh* SphereMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")))
+		{
+			VisualMesh->SetStaticMesh(SphereMesh);
+		}
+	}
 }
 
 void AROHProjectile::InitProjectile(AROHCharacterBase* InSource, const FROHDamageParams& InDamage, float Speed)

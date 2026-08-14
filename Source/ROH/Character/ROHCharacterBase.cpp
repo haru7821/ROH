@@ -7,7 +7,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "UObject/ConstructorHelpers.h"
+#include "Engine/StaticMesh.h"
 
 AROHCharacterBase::AROHCharacterBase()
 {
@@ -17,16 +17,12 @@ AROHCharacterBase::AROHCharacterBase()
 	AttributeSet = CreateDefaultSubobject<UROHAttributeSet>(TEXT("AttributeSet"));
 
 	// 그레이박스: 엔진 기본 캡슐 메시로 몸통 표시 (아트는 M6)
+	// 메시 로드는 BeginPlay에서 수행 — 모듈 로딩 시점(CDO 생성)에는 엔진 콘텐츠가
+	// 아직 마운트되지 않아 실패하는 것을 로컬 5.8 빌드에서 확인
 	VisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("VisualMesh"));
 	VisualMesh->SetupAttachment(GetCapsuleComponent());
 	VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> CapsuleMesh(TEXT("/Engine/BasicShapes/Capsule.Capsule"));
-	if (CapsuleMesh.Succeeded())
-	{
-		VisualMesh->SetStaticMesh(CapsuleMesh.Object);
-		VisualMesh->SetRelativeLocation(FVector(0.f, 0.f, 0.f));
-		VisualMesh->SetRelativeScale3D(FVector(0.8f, 0.8f, 1.7f));
-	}
+	VisualMesh->SetRelativeScale3D(FVector(0.8f, 0.8f, 1.7f));
 }
 
 UAbilitySystemComponent* AROHCharacterBase::GetAbilitySystemComponent() const
@@ -42,6 +38,15 @@ bool AROHCharacterBase::IsAlive() const
 void AROHCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 그레이박스 비주얼 메시 로드 (생성자 시점엔 엔진 콘텐츠 미마운트)
+	if (VisualMesh && !VisualMesh->GetStaticMesh())
+	{
+		if (UStaticMesh* CapsuleMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Capsule.Capsule")))
+		{
+			VisualMesh->SetStaticMesh(CapsuleMesh);
+		}
+	}
 
 	// AI 등 컨트롤러 빙의 전에 스폰되는 경우 대비
 	if (AbilitySystemComponent && !AbilitySystemComponent->AbilityActorInfo->OwnerActor.IsValid())
