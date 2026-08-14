@@ -28,8 +28,9 @@ void UROHAbility_Whirlwind::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	}
 
 	const float Strength = Character->GetAttributeSet()->GetStrength();
+	const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 	FROHDamageParams Damage;
-	Damage.PhysicalDamage = BaseDamage * (1.f + Strength * 0.01f);
+	Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f);
 	Damage.bUseAttackRoll = true;
 
 	for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInRadius(Character, Character->GetActorLocation(), Radius))

@@ -2,7 +2,13 @@
 #include "Abilities/Monster/ROHAbility_MonsterAttack.h"
 #include "AI/ROHMonsterAIController.h"
 #include "Character/ROHAttributeSet.h"
+#include "Items/ROHItemDatabase.h"
+#include "Loot/ROHItemPickup.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/World.h"
+#include "Engine/GameInstance.h"
 
 AROHMonsterCharacter::AROHMonsterCharacter()
 {
@@ -23,8 +29,64 @@ void AROHMonsterCharacter::HandleDeath(AActor* Killer)
 	}
 	Super::HandleDeath(Killer);
 
+	DropLoot(Killer);
 	DetachFromControllerPendingDestroy();
 	SetLifeSpan(CorpseLifetime);
+}
+
+void AROHMonsterCharacter::DropLoot(AActor* Killer)
+{
+	UWorld* World = GetWorld();
+	const UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
+	UROHItemDatabase* Database = GameInstance ? GameInstance->GetSubsystem<UROHItemDatabase>() : nullptr;
+	if (!Database || TreasureClassId.IsNone())
+	{
+		return;
+	}
+
+	// 처치자의 MF 적용 (docs/02 §3.4)
+	float MagicFind = 0.f;
+	if (const IAbilitySystemInterface* KillerASI = Cast<IAbilitySystemInterface>(Killer))
+	{
+		if (const UAbilitySystemComponent* KillerASC = KillerASI->GetAbilitySystemComponent())
+		{
+			MagicFind = KillerASC->GetNumericAttribute(UROHAttributeSet::GetMagicFindAttribute());
+		}
+	}
+
+	const int32 ItemLevel = AttributeSet ? FMath::RoundToInt(AttributeSet->GetCharacterLevel()) : 1;
+	const FROHDropResult Drops = Database->RollTreasureClass(TreasureClassId, ItemLevel, MagicFind);
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	int32 SpawnIndex = 0;
+	auto NextDropLocation = [this, &SpawnIndex]()
+	{
+		// 시체 주위로 원형 산개
+		const float Angle = SpawnIndex * 137.5f; // 황금각: 겹침 최소화
+		++SpawnIndex;
+		const float Radius = 80.f + 30.f * SpawnIndex;
+		return GetActorLocation() + FVector(
+			FMath::Cos(FMath::DegreesToRadians(Angle)) * Radius,
+			FMath::Sin(FMath::DegreesToRadians(Angle)) * Radius,
+			0.f);
+	};
+
+	for (const FROHItemInstance& Item : Drops.Items)
+	{
+		if (AROHItemPickup* Pickup = World->SpawnActor<AROHItemPickup>(AROHItemPickup::StaticClass(), NextDropLocation(), FRotator::ZeroRotator, SpawnParams))
+		{
+			Pickup->InitAsItem(Item);
+		}
+	}
+	if (Drops.Gold > 0)
+	{
+		if (AROHItemPickup* Pickup = World->SpawnActor<AROHItemPickup>(AROHItemPickup::StaticClass(), NextDropLocation(), FRotator::ZeroRotator, SpawnParams))
+		{
+			Pickup->InitAsGold(Drops.Gold);
+		}
+	}
 }
 
 AROHMonster_Grunt::AROHMonster_Grunt()

@@ -46,8 +46,9 @@ void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	if (BestTarget)
 	{
 		const float Strength = Character->GetAttributeSet()->GetStrength();
+		const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 		FROHDamageParams Damage;
-		Damage.PhysicalDamage = BaseDamage * (1.f + Strength * 0.01f);
+		Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f);
 		Damage.bUseAttackRoll = true;
 
 		if (UROHCombatStatics::ApplyDamage(Character, BestTarget, Damage))

@@ -6,6 +6,7 @@
 
 class USpringArmComponent;
 class UCameraComponent;
+class UROHInventoryComponent;
 
 /**
  * 쿼터뷰 플레이어 캐릭터.
@@ -27,7 +28,12 @@ public:
 
 	virtual void HandleDeath(AActor* Killer) override;
 
+	UROHInventoryComponent* GetInventory() const { return Inventory; }
+
 protected:
+	UPROPERTY(VisibleAnywhere, Category = "ROH|Inventory")
+	TObjectPtr<UROHInventoryComponent> Inventory;
+
 	UPROPERTY(VisibleAnywhere, Category = "ROH|Camera")
 	TObjectPtr<USpringArmComponent> SpringArm;
 

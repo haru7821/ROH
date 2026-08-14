@@ -17,6 +17,8 @@ UROHAttributeSet::UROHAttributeSet()
 	InitCharacterLevel(1.f);
 	InitAttackRating(50.f);
 	InitDefense(50.f);
+	InitAttackPower(0.f);
+	InitMagicFind(0.f);
 	InitPhysicalResistance(0.f);
 	InitFireResistance(0.f);
 	InitColdResistance(0.f);

@@ -50,6 +50,13 @@ protected:
 	/** 사망 후 시체 유지 시간(초) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Monster")
 	float CorpseLifetime = 4.f;
+
+	/** 사망 시 굴릴 트레저 클래스 (docs/02 §3.4) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Monster")
+	FName TreasureClassId = TEXT("TC_Default");
+
+private:
+	void DropLoot(AActor* Killer);
 };
 
 /** 졸개: 평균적인 근접 몬스터 */

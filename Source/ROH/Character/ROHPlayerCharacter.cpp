@@ -1,5 +1,6 @@
 #include "Character/ROHPlayerCharacter.h"
 #include "Character/ROHAttributeSet.h"
+#include "Items/ROHInventoryComponent.h"
 #include "Abilities/ROHAbilitySystemComponent.h"
 #include "Abilities/Warrior/ROHAbility_BasicAttack.h"
 #include "Abilities/Warrior/ROHAbility_Bash.h"
@@ -29,6 +30,8 @@ AROHPlayerCharacter::AROHPlayerCharacter()
 	DefaultAbilities.Add(UROHAbility_Bash::StaticClass());
 	DefaultAbilities.Add(UROHAbility_Whirlwind::StaticClass());
 	DefaultAbilities.Add(UROHAbility_LeapAttack::StaticClass());
+
+	Inventory = CreateDefaultSubobject<UROHInventoryComponent>(TEXT("Inventory"));
 
 	// 이동 방향으로 캐릭터 회전 (쿼터뷰 표준)
 	bUseControllerRotationPitch = false;

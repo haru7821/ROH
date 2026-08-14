@@ -85,6 +85,16 @@ public:
 	FGameplayAttributeData Defense;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, Defense)
 
+	/** 무기 등 장비에서 오는 평 공격력 가산치 (스킬 피해 공식에 합산) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData AttackPower;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, AttackPower)
+
+	/** 매직 파인드 %: 드랍 등급 판정 보너스 (체감 곡선 적용) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData MagicFind;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MagicFind)
+
 	// 저항: 퍼센트(0~75 캡, 악몽/지옥 페널티로 음수 가능)
 	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
 	FGameplayAttributeData PhysicalResistance;
