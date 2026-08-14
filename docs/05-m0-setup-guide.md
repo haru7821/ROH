@@ -5,7 +5,7 @@ M0(기반 구축)의 C++ 골격이 저장소에 포함되어 있습니다. 이 �
 
 ## 1. 사전 준비
 
-- **Unreal Engine 5.4** (Epic Games Launcher에서 설치)
+- **Unreal Engine 5.8** (Epic Games Launcher에서 설치, 최신 패치 버전 권장)
   - 다른 5.x 버전을 쓰려면 `ROH.uproject`의 `EngineAssociation` 수정
 - **Visual Studio 2022** + "C++를 사용한 게임 개발" 워크로드 (Windows 기준)
 
