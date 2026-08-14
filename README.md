@@ -19,6 +19,17 @@
 | [docs/02-core-systems.md](docs/02-core-systems.md) | 캐릭터, 스킬트리, 아이템/룬워드, 정복자 시스템 설계 |
 | [docs/03-tech-architecture.md](docs/03-tech-architecture.md) | 기술 스택, 아키텍처, 데이터 설계 |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | 마일스톤별 개발 로드맵 |
+| [docs/05-m0-setup-guide.md](docs/05-m0-setup-guide.md) | M0 로컬 빌드/에디터 셋업 가이드 |
+
+## 개발 현황
+
+- [x] **M0. 기반 구축** — UE5 프로젝트 골격, GAS 셋업(ASC/AttributeSet), 쿼터뷰 클릭 이동, 치트 콘솔
+- [ ] M1. 전투 수직 슬라이스
+- [ ] M2. 아이템 & 드랍
+- [ ] M3. 성장 시스템 (스킬트리 + 원소술사)
+- [ ] M4. 캠페인 & 난이도
+- [ ] M5. 엔드게임 (룬워드 + 정복자)
+- [ ] M6. 폴리싱
 
 ## 개발 원칙
 
