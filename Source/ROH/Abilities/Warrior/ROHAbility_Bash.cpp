@@ -29,6 +29,7 @@ void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	}
 
 	FaceLocation(GetCursorLocation());
+	DebugDrawSwing(Character->GetActorLocation() + Character->GetActorForwardVector() * Range * 0.5f, Range * 0.5f);
 
 	// 가장 가까운 단일 대상
 	AROHCharacterBase* BestTarget = nullptr;

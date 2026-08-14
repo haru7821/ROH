@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "DrawDebugHelpers.h"
 
 UROHGameplayAbility::UROHGameplayAbility()
 {
@@ -132,5 +133,16 @@ void UROHGameplayAbility::PlayHitFeedback(AROHCharacterBase* Target) const
 	if (HitStopSeconds > 0.f)
 	{
 		UROHCombatStatics::ApplyHitStop(Character, Target, HitStopSeconds);
+	}
+
+	// 그레이박스 타격 표시: 맞은 대상 위치에 빨간 구
+	DrawDebugSphere(Character->GetWorld(), HitLocation + FVector(0.f, 0.f, 50.f), 40.f, 12, FColor::Red, false, 0.25f);
+}
+
+void UROHGameplayAbility::DebugDrawSwing(const FVector& Center, float Radius) const
+{
+	if (const AROHCharacterBase* Character = GetROHCharacter())
+	{
+		DrawDebugSphere(Character->GetWorld(), Center, Radius, 16, FColor::Yellow, false, 0.2f);
 	}
 }

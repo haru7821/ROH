@@ -27,6 +27,8 @@ void UROHAbility_Whirlwind::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 
+	DebugDrawSwing(Character->GetActorLocation(), Radius);
+
 	const float Strength = Character->GetAttributeSet()->GetStrength();
 	const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 	FROHDamageParams Damage;

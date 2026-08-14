@@ -8,6 +8,30 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/StaticMesh.h"
+#include "ROH.h"
+
+namespace
+{
+	// 엔진 설치본마다 기본 메시 구성이 달라 후보를 순서대로 시도
+	UStaticMesh* LoadGrayboxBodyMesh()
+	{
+		static const TCHAR* CandidatePaths[] = {
+			TEXT("/Engine/BasicShapes/Capsule.Capsule"),
+			TEXT("/Engine/BasicShapes/Cylinder.Cylinder"),
+			TEXT("/Engine/EngineMeshes/Cylinder.Cylinder"),
+			TEXT("/Engine/EngineMeshes/Sphere.Sphere"),
+		};
+		for (const TCHAR* Path : CandidatePaths)
+		{
+			if (UStaticMesh* Mesh = LoadObject<UStaticMesh>(nullptr, Path))
+			{
+				UE_LOG(LogROH, Log, TEXT("그레이박스 메시 로드: %s"), Path);
+				return Mesh;
+			}
+		}
+		return nullptr;
+	}
+}
 
 AROHCharacterBase::AROHCharacterBase()
 {
@@ -42,9 +66,21 @@ void AROHCharacterBase::BeginPlay()
 	// 그레이박스 비주얼 메시 로드 (생성자 시점엔 엔진 콘텐츠 미마운트)
 	if (VisualMesh && !VisualMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* CapsuleMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Capsule.Capsule")))
+		if (UStaticMesh* BodyMesh = LoadGrayboxBodyMesh())
 		{
-			VisualMesh->SetStaticMesh(CapsuleMesh);
+			VisualMesh->SetStaticMesh(BodyMesh);
+			// 메시 종류와 무관하게 몸통 크기(지름 80 x 높이 180)로 정규화
+			const FVector Extent = BodyMesh->GetBounds().BoxExtent;
+			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
+			{
+				VisualMesh->SetRelativeScale3D(FVector(40.f / Extent.X, 40.f / Extent.Y, 90.f / Extent.Z));
+			}
+		}
+		else
+		{
+			// 마지막 안전망: 캡슐 콜리전 와이어프레임이라도 게임 중 표시
+			GetCapsuleComponent()->SetHiddenInGame(false);
+			UE_LOG(LogROH, Warning, TEXT("그레이박스 메시를 찾지 못해 캡슐 와이어프레임으로 표시합니다"));
 		}
 	}
 

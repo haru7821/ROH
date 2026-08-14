@@ -35,12 +35,35 @@ void AROHProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 생성자 시점엔 엔진 콘텐츠가 마운트되지 않아 여기서 로드
+	// 생성자 시점엔 엔진 콘텐츠가 마운트되지 않아 여기서 로드 (후보 순차 시도)
 	if (VisualMesh && !VisualMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* SphereMesh = LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere")))
+		static const TCHAR* CandidatePaths[] = {
+			TEXT("/Engine/BasicShapes/Sphere.Sphere"),
+			TEXT("/Engine/EngineMeshes/Sphere.Sphere"),
+		};
+		UStaticMesh* SphereMesh = nullptr;
+		for (const TCHAR* Path : CandidatePaths)
+		{
+			SphereMesh = LoadObject<UStaticMesh>(nullptr, Path);
+			if (SphereMesh)
+			{
+				break;
+			}
+		}
+
+		if (SphereMesh)
 		{
 			VisualMesh->SetStaticMesh(SphereMesh);
+			const FVector Extent = SphereMesh->GetBounds().BoxExtent;
+			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
+			{
+				VisualMesh->SetRelativeScale3D(FVector(15.f / Extent.X, 15.f / Extent.Y, 15.f / Extent.Z));
+			}
+		}
+		else
+		{
+			CollisionSphere->SetHiddenInGame(false);
 		}
 	}
 }

@@ -39,8 +39,11 @@ protected:
 	/** 캐릭터를 지정 좌표 방향(Yaw만)으로 즉시 회전 */
 	void FaceLocation(const FVector& Location) const;
 
-	/** 타격 성공 시 공통 피드백 (이펙트/사운드/셰이크/히트스톱) */
+	/** 타격 성공 시 공통 피드백 (이펙트/사운드/셰이크/히트스톱 + 디버그 표시) */
 	void PlayHitFeedback(AROHCharacterBase* Target) const;
+
+	/** 그레이박스용: 스킬 발동 범위를 잠깐 표시 (아트 이펙트가 붙기 전 시각 피드백) */
+	void DebugDrawSwing(const FVector& Center, float Radius) const;
 
 	// --- 비용 ---
 	/** 소모 자원 어트리뷰트 (예: Rage, Mana). 비워두면 비용 없음 */
