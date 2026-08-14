@@ -20,6 +20,7 @@
 | [docs/03-tech-architecture.md](docs/03-tech-architecture.md) | 기술 스택, 아키텍처, 데이터 설계 |
 | [docs/04-roadmap.md](docs/04-roadmap.md) | 마일스톤별 개발 로드맵 |
 | [docs/05-m0-setup-guide.md](docs/05-m0-setup-guide.md) | M0 로컬 빌드/에디터 셋업 가이드 |
+| [docs/06-story-and-cinematics.md](docs/06-story-and-cinematics.md) | 스토리라인, 세계관, 시네마틱 계획 |
 
 ## 개발 현황
 
