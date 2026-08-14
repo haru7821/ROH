@@ -5,10 +5,8 @@
 #include "Abilities/ROHAbilitySystemComponent.h"
 #include "EngineUtils.h"
 #include "Engine/Engine.h"
-#include "Abilities/Warrior/ROHAbility_BasicAttack.h"
-#include "Abilities/Warrior/ROHAbility_Bash.h"
-#include "Abilities/Warrior/ROHAbility_Whirlwind.h"
-#include "Abilities/Warrior/ROHAbility_LeapAttack.h"
+#include "Progression/ROHProgressionComponent.h"
+#include "Progression/ROHSkillTreeComponent.h"
 #include "Core/ROHGameMode.h"
 #include "ROHGameplayTags.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -21,20 +19,11 @@
 AROHPlayerCharacter::AROHPlayerCharacter()
 {
 	TeamId = 0;
-
-	// 전사 프리셋 (docs/02 §1.1) — M3에서 클래스 선택으로 분리
-	BaseStrength = 30.f;
-	BaseDexterity = 20.f;
-	BaseVitality = 25.f;
-	BaseEnergy = 10.f;
-	BaseMaxHealth = 50.f; // 최종 생명력 = 50 + 활력 25×4 = 150
-
-	DefaultAbilities.Add(UROHAbility_BasicAttack::StaticClass());
-	DefaultAbilities.Add(UROHAbility_Bash::StaticClass());
-	DefaultAbilities.Add(UROHAbility_Whirlwind::StaticClass());
-	DefaultAbilities.Add(UROHAbility_LeapAttack::StaticClass());
+	// 스탯/어빌리티 프리셋은 서브클래스(전사/원소술사)가 정의 — ROHPlayerClasses 참고
 
 	Inventory = CreateDefaultSubobject<UROHInventoryComponent>(TEXT("Inventory"));
+	Progression = CreateDefaultSubobject<UROHProgressionComponent>(TEXT("Progression"));
+	SkillTree = CreateDefaultSubobject<UROHSkillTreeComponent>(TEXT("SkillTree"));
 
 	// 이동 방향으로 캐릭터 회전 (쿼터뷰 표준)
 	bUseControllerRotationPitch = false;
@@ -71,6 +60,22 @@ void AROHPlayerCharacter::ActivateAbilityBySlot(int32 SlotIndex)
 		return;
 	}
 	AbilitySystemComponent->TryActivateAbilityByClass(DefaultAbilities[SlotIndex]);
+}
+
+void AROHPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// 성장 상태 표시 (좌상단 두 번째 줄)
+	if (GEngine && IsPlayerControlled() && Progression)
+	{
+		GEngine->AddOnScreenDebugMessage(5, 0.5f, FColor::White,
+			FString::Printf(TEXT("Lv %d | XP %d/%d | 스탯P %d | 스킬P %d | 골드 %d"),
+				Progression->GetLevel(), Progression->GetXP(),
+				UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()),
+				Progression->GetStatPoints(), Progression->GetSkillPoints(),
+				Inventory ? Inventory->GetGold() : 0));
+	}
 }
 
 void AROHPlayerCharacter::Interact()

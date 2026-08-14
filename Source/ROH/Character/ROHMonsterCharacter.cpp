@@ -4,6 +4,7 @@
 #include "Character/ROHAttributeSet.h"
 #include "Items/ROHItemDatabase.h"
 #include "Loot/ROHItemPickup.h"
+#include "Progression/ROHProgressionComponent.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -28,6 +29,15 @@ void AROHMonsterCharacter::HandleDeath(AActor* Killer)
 		return;
 	}
 	Super::HandleDeath(Killer);
+
+	// 처치자 경험치 지급 (docs/02 §2.1)
+	if (const AROHCharacterBase* KillerCharacter = Cast<AROHCharacterBase>(Killer))
+	{
+		if (UROHProgressionComponent* Progression = KillerCharacter->FindComponentByClass<UROHProgressionComponent>())
+		{
+			Progression->GrantXP(XPValue);
+		}
+	}
 
 	DropLoot(Killer);
 	DetachFromControllerPendingDestroy();
@@ -99,6 +109,7 @@ AROHMonster_Grunt::AROHMonster_Grunt()
 	AttackDamage = 10.f;
 	AttackRange = 180.f;
 	AttackInterval = 1.5f;
+	XPValue = 15;
 }
 
 AROHMonster_Archer::AROHMonster_Archer()
@@ -110,6 +121,7 @@ AROHMonster_Archer::AROHMonster_Archer()
 	PreferredRange = 700.f;
 	AttackInterval = 2.f;
 	AttackAbility = UROHAbility_MonsterRanged::StaticClass();
+	XPValue = 12;
 }
 
 AROHMonster_Charger::AROHMonster_Charger()
@@ -119,4 +131,5 @@ AROHMonster_Charger::AROHMonster_Charger()
 	AttackDamage = 15.f;
 	AttackRange = 200.f;
 	AttackInterval = 1.2f;
+	XPValue = 18;
 }

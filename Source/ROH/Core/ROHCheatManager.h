@@ -52,4 +52,32 @@ public:
 	/** 드랍 시뮬레이터: TC를 N회 굴려 등급/골드 통계 출력. 예: ROHSimulateDrops TC_Default 10000 */
 	UFUNCTION(Exec)
 	void ROHSimulateDrops(FName TCId, int32 Count = 10000);
+
+	// --- M3 성장/세이브 ---
+
+	/** 경험치 지급. 예: ROHGiveXP 500 */
+	UFUNCTION(Exec)
+	void ROHGiveXP(int32 Amount);
+
+	/** 스탯 분배. 예: ROHAllocStat Strength 5 (Strength/Dexterity/Vitality/Energy) */
+	UFUNCTION(Exec)
+	void ROHAllocStat(FName StatName, int32 Count = 1);
+
+	/** 스킬 포인트 투자. 예: ROHSkillUp Bash */
+	UFUNCTION(Exec)
+	void ROHSkillUp(FName SkillId);
+
+	/** 스킬트리 현황 출력 (스킬 목록/랭크/요구 조건) */
+	UFUNCTION(Exec)
+	void ROHSkillInfo();
+
+	/** 클래스 전환: warrior / elem. 예: ROHSetClass elem */
+	UFUNCTION(Exec)
+	void ROHSetClass(FString ClassName);
+
+	UFUNCTION(Exec)
+	void ROHSave();
+
+	UFUNCTION(Exec)
+	void ROHLoad();
 };

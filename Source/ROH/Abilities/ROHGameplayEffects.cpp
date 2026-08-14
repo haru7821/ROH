@@ -25,3 +25,15 @@ UROHCooldownEffect::UROHCooldownEffect()
 	SetByCaller.DataTag = ROHGameplayTags::Data_Cooldown;
 	DurationMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
 }
+
+UROHSlowEffect::UROHSlowEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(3.f));
+
+	FGameplayModifierInfo SlowModifier;
+	SlowModifier.Attribute = UROHAttributeSet::GetMoveSpeedAttribute();
+	SlowModifier.ModifierOp = EGameplayModOp::Additive;
+	SlowModifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(-250.f));
+	Modifiers.Add(SlowModifier);
+}

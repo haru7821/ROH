@@ -201,6 +201,34 @@ bool UROHInventoryComponent::UseFirstPotion()
 	return false;
 }
 
+void UROHInventoryComponent::ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const
+{
+	OutItems = Items;
+	OutEquipped = Equipped;
+	OutGold = Gold;
+}
+
+void UROHInventoryComponent::RestoreState(const TArray<FROHItemInstance>& InItems, const TMap<EROHEquipSlot, FROHItemInstance>& InEquipped, int32 InGold)
+{
+	// 기존 장착 효과 제거 후 초기화
+	TArray<EROHEquipSlot> Slots;
+	Equipped.GetKeys(Slots);
+	for (EROHEquipSlot Slot : Slots)
+	{
+		RemoveEquipEffect(Slot);
+	}
+	Equipped.Reset();
+	Items = InItems;
+	Gold = FMath::Max(0, InGold);
+
+	// 장착 복원: 인벤토리에 넣었다가 정식 경로로 장착 (GE 재적용 보장)
+	for (const auto& Pair : InEquipped)
+	{
+		Items.Add(Pair.Value);
+		EquipItemByIndex(Items.Num() - 1);
+	}
+}
+
 void UROHInventoryComponent::AddGold(int32 Amount)
 {
 	Gold = FMath::Max(0, Gold + Amount);

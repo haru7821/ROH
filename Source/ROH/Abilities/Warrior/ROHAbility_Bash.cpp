@@ -6,6 +6,7 @@
 
 UROHAbility_Bash::UROHAbility_Bash()
 {
+	SkillId = TEXT("Bash");
 	CostAttribute = UROHAttributeSet::GetRageAttribute();
 	CostAmount = 15.f;
 	CooldownDuration = 4.f;
@@ -15,6 +16,11 @@ UROHAbility_Bash::UROHAbility_Bash()
 
 void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	if (!CheckSkillInvested())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -49,7 +55,7 @@ void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		const float Strength = Character->GetAttributeSet()->GetStrength();
 		const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 		FROHDamageParams Damage;
-		Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f);
+		Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f) * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = true;
 
 		if (UROHCombatStatics::ApplyDamage(Character, BestTarget, Damage))

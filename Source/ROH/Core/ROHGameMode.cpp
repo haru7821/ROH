@@ -1,6 +1,7 @@
 #include "Core/ROHGameMode.h"
 #include "Core/ROHPlayerController.h"
 #include "Character/ROHPlayerCharacter.h"
+#include "Character/ROHPlayerClasses.h"
 #include "World/ROHMonsterSpawner.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
@@ -9,8 +10,37 @@
 
 AROHGameMode::AROHGameMode()
 {
-	DefaultPawnClass = AROHPlayerCharacter::StaticClass();
+	DefaultPawnClass = AROHWarriorCharacter::StaticClass();
 	PlayerControllerClass = AROHPlayerController::StaticClass();
+}
+
+AROHPlayerCharacter* AROHGameMode::RespawnPlayerAs(APlayerController* PlayerController, TSubclassOf<AROHPlayerCharacter> NewClass)
+{
+	if (!PlayerController || !NewClass)
+	{
+		return nullptr;
+	}
+
+	FTransform SpawnTransform(FRotator::ZeroRotator, FVector(0.f, 0.f, 100.f));
+	if (APawn* OldPawn = PlayerController->GetPawn())
+	{
+		SpawnTransform = OldPawn->GetActorTransform();
+		PlayerController->UnPossess();
+		OldPawn->Destroy();
+	}
+	else if (const AActor* Start = FindPlayerStart(PlayerController))
+	{
+		SpawnTransform = Start->GetActorTransform();
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	AROHPlayerCharacter* NewPawn = GetWorld()->SpawnActor<AROHPlayerCharacter>(NewClass, SpawnTransform, SpawnParams);
+	if (NewPawn)
+	{
+		PlayerController->Possess(NewPawn);
+	}
+	return NewPawn;
 }
 
 void AROHGameMode::BeginPlay()

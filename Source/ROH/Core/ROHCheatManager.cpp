@@ -1,8 +1,13 @@
 #include "Core/ROHCheatManager.h"
+#include "Core/ROHGameMode.h"
 #include "Items/ROHItemDatabase.h"
 #include "Items/ROHInventoryComponent.h"
 #include "Items/ROHItemTypes.h"
 #include "Character/ROHPlayerCharacter.h"
+#include "Character/ROHPlayerClasses.h"
+#include "Progression/ROHProgressionComponent.h"
+#include "Progression/ROHSkillTreeComponent.h"
+#include "Save/ROHSaveSubsystem.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/PlayerController.h"
@@ -268,5 +273,136 @@ void UROHCheatManager::ROHSimulateDrops(FName TCId, int32 Count)
 	for (const auto& Pair : BaseCounts)
 	{
 		CheatPrint(FString::Printf(TEXT("  %s: %d"), *Pair.Key.ToString(), Pair.Value));
+	}
+}
+
+void UROHCheatManager::ROHGiveXP(int32 Amount)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (Player && Player->GetProgression())
+	{
+		Player->GetProgression()->GrantXP(Amount);
+		CheatPrint(FString::Printf(TEXT("경험치 +%d (Lv %d)"), Amount, Player->GetProgression()->GetLevel()));
+	}
+}
+
+void UROHCheatManager::ROHAllocStat(FName StatName, int32 Count)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player || !Player->GetProgression())
+	{
+		return;
+	}
+	int32 Applied = 0;
+	for (int32 i = 0; i < FMath::Max(1, Count); ++i)
+	{
+		if (!Player->GetProgression()->AllocateStat(StatName))
+		{
+			break;
+		}
+		++Applied;
+	}
+	CheatPrint(FString::Printf(TEXT("%s +%d (남은 스탯 포인트 %d)"),
+		*StatName.ToString(), Applied, Player->GetProgression()->GetStatPoints()));
+}
+
+void UROHCheatManager::ROHSkillUp(FName SkillId)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player || !Player->GetSkillTree())
+	{
+		return;
+	}
+	FString Error;
+	if (Player->GetSkillTree()->InvestPoint(SkillId, Error))
+	{
+		CheatPrint(FString::Printf(TEXT("%s 랭크 %d (피해 배수 x%.2f)"),
+			*SkillId.ToString(), Player->GetSkillTree()->GetRank(SkillId),
+			Player->GetSkillTree()->GetDamageMultiplier(SkillId)));
+	}
+	else
+	{
+		CheatPrint(FString::Printf(TEXT("투자 실패: %s"), *Error));
+	}
+}
+
+void UROHCheatManager::ROHSkillInfo()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player || !Player->GetSkillTree() || !Player->GetProgression())
+	{
+		return;
+	}
+	UROHSkillTreeComponent* SkillTree = Player->GetSkillTree();
+	CheatPrint(FString::Printf(TEXT("=== 스킬트리 (스킬 포인트 %d) ==="), Player->GetProgression()->GetSkillPoints()));
+	for (const FROHSkillDef& Def : UROHSkillTreeComponent::GetSkillDefs(SkillTree->GetPlayerClass()))
+	{
+		FString Requirement = FString::Printf(TEXT("요구 Lv %d"), Def.RequiredLevel);
+		if (!Def.PrereqSkillId.IsNone())
+		{
+			Requirement += FString::Printf(TEXT(", 선행 %s"), *Def.PrereqSkillId.ToString());
+		}
+		CheatPrint(FString::Printf(TEXT("%s (%s): 랭크 %d/%d [%s] 배수 x%.2f"),
+			*Def.SkillId.ToString(), *Def.DisplayName.ToString(),
+			SkillTree->GetRank(Def.SkillId), Def.MaxPoints, *Requirement,
+			SkillTree->GetDamageMultiplier(Def.SkillId)));
+	}
+}
+
+void UROHCheatManager::ROHSetClass(FString ClassName)
+{
+	APlayerController* PC = GetOuterAPlayerController();
+	AROHGameMode* GameMode = GetWorld() ? GetWorld()->GetAuthGameMode<AROHGameMode>() : nullptr;
+	if (!PC || !GameMode)
+	{
+		return;
+	}
+
+	TSubclassOf<AROHPlayerCharacter> NewClass;
+	if (ClassName.StartsWith(TEXT("war"), ESearchCase::IgnoreCase))
+	{
+		NewClass = AROHWarriorCharacter::StaticClass();
+	}
+	else if (ClassName.StartsWith(TEXT("ele"), ESearchCase::IgnoreCase))
+	{
+		NewClass = AROHElementalistCharacter::StaticClass();
+	}
+	else
+	{
+		CheatPrint(TEXT("사용법: ROHSetClass warrior 또는 ROHSetClass elem"));
+		return;
+	}
+
+	if (GameMode->RespawnPlayerAs(PC, NewClass))
+	{
+		CheatPrint(FString::Printf(TEXT("클래스 전환: %s (성장/인벤토리는 초기화 — 유지하려면 전환 전 ROHSave)"), *ClassName));
+	}
+}
+
+void UROHCheatManager::ROHSave()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	UROHSaveSubsystem* SaveSystem = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHSaveSubsystem>() : nullptr;
+	if (Player && SaveSystem)
+	{
+		CheatPrint(SaveSystem->SaveCharacter(Player) ? TEXT("세이브 완료") : TEXT("세이브 실패"));
+	}
+}
+
+void UROHCheatManager::ROHLoad()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	UROHSaveSubsystem* SaveSystem = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHSaveSubsystem>() : nullptr;
+	if (Player && SaveSystem)
+	{
+		CheatPrint(SaveSystem->LoadCharacter(Player) ? TEXT("로드 완료") : TEXT("로드 실패 (세이브 없음/버전 불일치)"));
 	}
 }

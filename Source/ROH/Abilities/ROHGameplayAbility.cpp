@@ -2,6 +2,8 @@
 #include "Abilities/ROHGameplayEffects.h"
 #include "Character/ROHCharacterBase.h"
 #include "Combat/ROHCombatStatics.h"
+#include "Progression/ROHSkillTreeComponent.h"
+#include "Engine/Engine.h"
 #include "ROHGameplayTags.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/PlayerController.h"
@@ -145,4 +147,36 @@ void UROHGameplayAbility::DebugDrawSwing(const FVector& Center, float Radius) co
 	{
 		DrawDebugSphere(Character->GetWorld(), Center, Radius, 16, FColor::Yellow, false, 0.2f);
 	}
+}
+
+bool UROHGameplayAbility::CheckSkillInvested() const
+{
+	if (SkillId.IsNone())
+	{
+		return true;
+	}
+	const AROHCharacterBase* Character = GetROHCharacter();
+	const UROHSkillTreeComponent* SkillTree = Character ? Character->FindComponentByClass<UROHSkillTreeComponent>() : nullptr;
+	if (SkillTree && SkillTree->GetRank(SkillId) > 0)
+	{
+		return true;
+	}
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(4, 3.f, FColor::Orange,
+			FString::Printf(TEXT("스킬 미습득: %s (콘솔 ROHSkillUp %s)"), *SkillId.ToString(), *SkillId.ToString()));
+	}
+	return false;
+}
+
+float UROHGameplayAbility::GetSkillDamageMultiplier() const
+{
+	if (SkillId.IsNone())
+	{
+		return 1.f;
+	}
+	const AROHCharacterBase* Character = GetROHCharacter();
+	const UROHSkillTreeComponent* SkillTree = Character ? Character->FindComponentByClass<UROHSkillTreeComponent>() : nullptr;
+	const float Multiplier = SkillTree ? SkillTree->GetDamageMultiplier(SkillId) : 1.f;
+	return Multiplier > 0.f ? Multiplier : 1.f;
 }

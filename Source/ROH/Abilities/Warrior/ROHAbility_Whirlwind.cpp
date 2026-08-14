@@ -6,6 +6,7 @@
 
 UROHAbility_Whirlwind::UROHAbility_Whirlwind()
 {
+	SkillId = TEXT("Whirlwind");
 	CostAttribute = UROHAttributeSet::GetRageAttribute();
 	CostAmount = 25.f;
 	CooldownDuration = 6.f;
@@ -14,6 +15,11 @@ UROHAbility_Whirlwind::UROHAbility_Whirlwind()
 
 void UROHAbility_Whirlwind::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	if (!CheckSkillInvested())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
@@ -32,7 +38,7 @@ void UROHAbility_Whirlwind::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	const float Strength = Character->GetAttributeSet()->GetStrength();
 	const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 	FROHDamageParams Damage;
-	Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f);
+	Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f) * GetSkillDamageMultiplier();
 	Damage.bUseAttackRoll = true;
 
 	for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInRadius(Character, Character->GetActorLocation(), Radius))

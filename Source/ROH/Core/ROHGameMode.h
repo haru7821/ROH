@@ -17,6 +17,9 @@ public:
 	/** 플레이어 사망 시 호출: RespawnDelay 후 플레이어 스타트에서 부활 */
 	void SchedulePlayerRespawn(AROHPlayerCharacter* DeadPlayer);
 
+	/** 클래스 전환: 현재 폰을 파괴하고 지정 클래스로 재스폰 (치트/로드용) */
+	AROHPlayerCharacter* RespawnPlayerAs(APlayerController* PlayerController, TSubclassOf<AROHPlayerCharacter> NewClass);
+
 protected:
 	virtual void BeginPlay() override;
 

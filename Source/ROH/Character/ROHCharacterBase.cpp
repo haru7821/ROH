@@ -107,6 +107,13 @@ void AROHCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// 마나 재생: 초당 1 + 에너지×0.04 (docs/02 §1.3)
+	if (IsAlive() && AttributeSet && AttributeSet->GetMana() < AttributeSet->GetMaxMana())
+	{
+		const float Regen = (1.f + AttributeSet->GetEnergy() * 0.04f) * DeltaSeconds;
+		AttributeSet->SetMana(FMath::Min(AttributeSet->GetMana() + Regen, AttributeSet->GetMaxMana()));
+	}
+
 	// 그레이박스: 메시 유무와 무관하게 몸통을 매 프레임 선으로 그린다
 	// (플레이어 = 초록, 몬스터 = 빨강, 사망 = 회색)
 	const FColor BodyColor = !IsAlive() ? FColor(120, 120, 120)

@@ -22,8 +22,8 @@ class ROH_API AROHProjectile : public AActor
 public:
 	AROHProjectile();
 
-	/** 발사 직후 호출: 발사자/피해/속도 설정 */
-	void InitProjectile(AROHCharacterBase* InSource, const FROHDamageParams& InDamage, float Speed);
+	/** 발사 직후 호출: 발사자/피해/속도 설정. ExplosionRadius > 0이면 명중 지점 광역 피해 */
+	void InitProjectile(AROHCharacterBase* InSource, const FROHDamageParams& InDamage, float Speed, float InExplosionRadius = 0.f);
 
 protected:
 	virtual void BeginPlay() override;
@@ -41,6 +41,9 @@ protected:
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement;
 
 private:
+	void Detonate(const FVector& Location);
+
 	TWeakObjectPtr<AROHCharacterBase> Source;
 	FROHDamageParams DamageParams;
+	float ExplosionRadius = 0.f;
 };

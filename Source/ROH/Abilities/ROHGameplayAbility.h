@@ -45,6 +45,17 @@ protected:
 	/** 그레이박스용: 스킬 발동 범위를 잠깐 표시 (아트 이펙트가 붙기 전 시각 피드백) */
 	void DebugDrawSwing(const FVector& Center, float Radius) const;
 
+	/**
+	 * 스킬트리 연동: 랭크 미투자 시 발동 차단 + 랭크/시너지 피해 배수.
+	 * SkillId가 None이면 트리와 무관 (기본 공격 등) → 배수 1.
+	 */
+	bool CheckSkillInvested() const;
+	float GetSkillDamageMultiplier() const;
+
+	/** 스킬트리 상의 식별자 (None = 트리 미연동) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	FName SkillId;
+
 	// --- 비용 ---
 	/** 소모 자원 어트리뷰트 (예: Rage, Mana). 비워두면 비용 없음 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Cost")

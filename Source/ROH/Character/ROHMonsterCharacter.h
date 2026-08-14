@@ -55,6 +55,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Monster")
 	FName TreasureClassId = TEXT("TC_Default");
 
+	/** 처치 시 지급 경험치 */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Monster")
+	int32 XPValue = 15;
+
 private:
 	void DropLoot(AActor* Killer);
 };

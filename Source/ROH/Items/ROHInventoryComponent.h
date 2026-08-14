@@ -45,6 +45,10 @@ public:
 	const TMap<EROHEquipSlot, FROHItemInstance>& GetEquipped() const { return Equipped; }
 	bool IsFull() const { return Items.Num() >= Capacity; }
 
+	/** 세이브/로드: 현재 상태 내보내기/복원 (복원 시 장착 GE 재적용) */
+	void ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const;
+	void RestoreState(const TArray<FROHItemInstance>& InItems, const TMap<EROHEquipSlot, FROHItemInstance>& InEquipped, int32 InGold);
+
 protected:
 	UAbilitySystemComponent* GetOwnerASC() const;
 	UROHItemDatabase* GetDatabase() const;

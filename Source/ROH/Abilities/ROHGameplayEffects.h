@@ -31,3 +31,13 @@ class ROH_API UROHCooldownEffect : public UGameplayEffect
 public:
 	UROHCooldownEffect();
 };
+
+/** 둔화: 3초간 이동속도 -250 (서리 신성 등 냉기 효과) */
+UCLASS()
+class ROH_API UROHSlowEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UROHSlowEffect();
+};
