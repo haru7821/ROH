@@ -25,3 +25,6 @@ Build/
 # OS
 .DS_Store
 Thumbs.db
+
+# 로컬 전용 설정 (update.bat의 엔진 경로 오버라이드)
+update.local.bat

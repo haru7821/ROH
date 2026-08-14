@@ -1,0 +1,2 @@
+# Windows 배치 파일은 CRLF 필수 (LF-only면 cmd의 goto 라벨 탐색이 깨질 수 있음)
+*.bat text eol=crlf

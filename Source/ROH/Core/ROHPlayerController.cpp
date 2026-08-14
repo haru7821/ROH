@@ -28,6 +28,8 @@ void AROHPlayerController::BeginPlay()
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 	{
 		// 다른 경로(BP 등)로 추가된 매핑 제거 후 코드 정의 매핑만 적용
+		// TODO(UI 도입 시): 전체 삭제 대신 이 컨트롤러가 아는 컨텍스트만 교체할 것
+		//                   (UI/CommonUI가 추가하는 IMC까지 지워버릴 수 있음)
 		Subsystem->ClearAllMappings();
 		if (DefaultMappingContext)
 		{

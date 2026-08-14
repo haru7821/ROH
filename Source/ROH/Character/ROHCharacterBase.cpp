@@ -74,11 +74,12 @@ void AROHCharacterBase::BeginPlay()
 		if (UStaticMesh* BodyMesh = LoadGrayboxBodyMesh())
 		{
 			VisualMesh->SetStaticMesh(BodyMesh);
-			// 메시 종류와 무관하게 몸통 크기(지름 80 x 높이 180)로 정규화
+			// 메시 종류와 무관하게 캡슐 크기에 맞춰 정규화 (바닥 파묻힘 방지)
 			const FVector Extent = BodyMesh->GetBounds().BoxExtent;
+			const float TargetHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
 			{
-				VisualMesh->SetRelativeScale3D(FVector(40.f / Extent.X, 40.f / Extent.Y, 90.f / Extent.Z));
+				VisualMesh->SetRelativeScale3D(FVector(40.f / Extent.X, 40.f / Extent.Y, TargetHalfHeight / Extent.Z));
 			}
 		}
 		else
@@ -122,19 +123,25 @@ void AROHCharacterBase::Tick(float DeltaSeconds)
 	// 플레이어: 좌상단 상태 텍스트 (빌드 태그 포함 — 실행 중인 코드 버전 확인용)
 	if (GEngine && IsPlayerControlled() && AttributeSet)
 	{
-		int32 AliveMonsters = 0;
-		for (TActorIterator<AROHMonsterCharacter> It(GetWorld()); It; ++It)
+		// 몬스터 수 집계는 0.25초 간격으로 캐시 (매 프레임 월드 순회 방지)
+		MonsterCountTimer -= DeltaSeconds;
+		if (MonsterCountTimer <= 0.f)
 		{
-			if (It->IsAlive())
+			MonsterCountTimer = 0.25f;
+			CachedAliveMonsters = 0;
+			for (TActorIterator<AROHMonsterCharacter> It(GetWorld()); It; ++It)
 			{
-				++AliveMonsters;
+				if (It->IsAlive())
+				{
+					++CachedAliveMonsters;
+				}
 			}
 		}
 		GEngine->AddOnScreenDebugMessage(1, 0.5f, FColor::Yellow,
 			FString::Printf(TEXT("ROH %s | 생명 %.0f/%.0f | 분노 %.0f | 마나 %.0f | 몬스터 %d"),
 				ROH_BUILD_TAG,
 				AttributeSet->GetHealth(), AttributeSet->GetMaxHealth(),
-				AttributeSet->GetRage(), AttributeSet->GetMana(), AliveMonsters));
+				AttributeSet->GetRage(), AttributeSet->GetMana(), CachedAliveMonsters));
 	}
 }
 

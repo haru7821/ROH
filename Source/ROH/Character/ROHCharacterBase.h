@@ -103,4 +103,8 @@ protected:
 private:
 	bool bAbilitiesGranted = false;
 	bool bAttributeDelegatesBound = false;
+
+	// 상태 표시용 몬스터 수 캐시 (0.25초 간격 갱신)
+	float MonsterCountTimer = 0.f;
+	int32 CachedAliveMonsters = 0;
 };
