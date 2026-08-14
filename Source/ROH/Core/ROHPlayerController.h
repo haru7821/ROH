@@ -29,11 +29,31 @@ protected:
 	void OnSetDestinationTriggered();
 	void OnSetDestinationReleased();
 
+	void OnBasicAttack();
+	void OnSkill1();
+	void OnSkill2();
+	void OnSkill3();
+	void ActivateSlot(int32 SlotIndex);
+
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> SetDestinationAction;
+
+	/** 기본 공격 (권장: 마우스 오른쪽 버튼) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> BasicAttackAction;
+
+	/** 스킬 1~3 (권장: Q/W/E) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> Skill1Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> Skill2Action;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> Skill3Action;
 
 	/** 이 시간(초) 이하로 누르면 클릭 이동, 넘으면 홀드 이동으로 판정 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")

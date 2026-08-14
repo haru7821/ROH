@@ -1,5 +1,6 @@
 #include "Core/ROHPlayerController.h"
 #include "Core/ROHCheatManager.h"
+#include "Character/ROHPlayerCharacter.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -50,6 +51,50 @@ void AROHPlayerController::SetupInputComponent()
 			EIC->BindAction(SetDestinationAction, ETriggerEvent::Completed, this, &AROHPlayerController::OnSetDestinationReleased);
 			EIC->BindAction(SetDestinationAction, ETriggerEvent::Canceled, this, &AROHPlayerController::OnSetDestinationReleased);
 		}
+		if (BasicAttackAction)
+		{
+			EIC->BindAction(BasicAttackAction, ETriggerEvent::Started, this, &AROHPlayerController::OnBasicAttack);
+		}
+		if (Skill1Action)
+		{
+			EIC->BindAction(Skill1Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill1);
+		}
+		if (Skill2Action)
+		{
+			EIC->BindAction(Skill2Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill2);
+		}
+		if (Skill3Action)
+		{
+			EIC->BindAction(Skill3Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill3);
+		}
+	}
+}
+
+void AROHPlayerController::OnBasicAttack()
+{
+	ActivateSlot(0);
+}
+
+void AROHPlayerController::OnSkill1()
+{
+	ActivateSlot(1);
+}
+
+void AROHPlayerController::OnSkill2()
+{
+	ActivateSlot(2);
+}
+
+void AROHPlayerController::OnSkill3()
+{
+	ActivateSlot(3);
+}
+
+void AROHPlayerController::ActivateSlot(int32 SlotIndex)
+{
+	if (AROHPlayerCharacter* PlayerCharacter = Cast<AROHPlayerCharacter>(GetPawn()))
+	{
+		PlayerCharacter->ActivateAbilityBySlot(SlotIndex);
 	}
 }
 

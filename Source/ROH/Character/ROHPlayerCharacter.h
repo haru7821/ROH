@@ -8,7 +8,8 @@ class USpringArmComponent;
 class UCameraComponent;
 
 /**
- * 쿼터뷰 플레이어 캐릭터. 카메라는 고정 각도 스프링암.
+ * 쿼터뷰 플레이어 캐릭터.
+ * M1: 전사 프리셋 (분노 자원, 근접 스킬 4종). M3에서 클래스 선택/원소술사 분리.
  */
 UCLASS()
 class ROH_API AROHPlayerCharacter : public AROHCharacterBase
@@ -17,6 +18,14 @@ class ROH_API AROHPlayerCharacter : public AROHCharacterBase
 
 public:
 	AROHPlayerCharacter();
+
+	/** 슬롯 인덱스(DefaultAbilities 순서)로 어빌리티 발동. 0=기본공격, 1~3=스킬 */
+	void ActivateAbilityBySlot(int32 SlotIndex);
+
+	/** 리스폰: 위치 이동 + 상태/자원 복구 */
+	void Revive(const FVector& Location);
+
+	virtual void HandleDeath(AActor* Killer) override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "ROH|Camera")

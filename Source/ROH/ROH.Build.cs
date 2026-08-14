@@ -18,6 +18,7 @@ public class ROH : ModuleRules
 			"GameplayTasks",
 			"AIModule",
 			"NavigationSystem",
+			"Niagara",
 			"UMG"
 		});
 	}

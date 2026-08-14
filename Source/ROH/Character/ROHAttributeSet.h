@@ -12,10 +12,12 @@
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 /**
- * 공통 스탯 세트 (docs/02 §1.3)
- * - 1차 스탯: 힘/민첩/활력/에너지 (레벨업 수동 분배)
- * - 자원: 생명력/마나 (활력/에너지에서 파생, 파생 공식은 M1에서 GameplayEffect로 연결)
- * 모든 스탯 보정(장비/스킬/정복자/버프)은 GameplayEffect로만 가한다.
+ * 공통 스탯 세트 (docs/02 §1.3, 피해 파이프라인은 docs/03 §3.1)
+ * - 1차 스탯: 힘/민첩/활력/에너지
+ * - 자원: 생명력/마나(원소술사)/분노(전사)
+ * - 전투: 명중(AttackRating)/방어(Defense)/저항 4종
+ * - IncomingDamage는 메타 어트리뷰트: 피해 GE가 여기에 쓰면
+ *   PostGameplayEffectExecute에서 Health로 반영 후 0으로 리셋된다.
  */
 UCLASS()
 class ROH_API UROHAttributeSet : public UAttributeSet
@@ -45,6 +47,14 @@ public:
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MaxMana)
 
+	UPROPERTY(BlueprintReadOnly, Category = "Vital")
+	FGameplayAttributeData Rage;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, Rage)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vital")
+	FGameplayAttributeData MaxRage;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MaxRage)
+
 	// --- 1차 스탯 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Primary")
 	FGameplayAttributeData Strength;
@@ -62,8 +72,43 @@ public:
 	FGameplayAttributeData Energy;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, Energy)
 
+	// --- 전투 ---
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData CharacterLevel;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, CharacterLevel)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData AttackRating;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, AttackRating)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData Defense;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, Defense)
+
+	// 저항: 퍼센트(0~75 캡, 악몽/지옥 페널티로 음수 가능)
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData PhysicalResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, PhysicalResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData FireResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, FireResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData ColdResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ColdResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData LightningResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, LightningResistance)
+
 	// --- 이동 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")
 	FGameplayAttributeData MoveSpeed;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MoveSpeed)
+
+	// --- 메타 (저장/표시되지 않는 계산용) ---
+	UPROPERTY(BlueprintReadOnly, Category = "Meta")
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, IncomingDamage)
 };
