@@ -37,11 +37,12 @@ protected:
 	void ActivateSlot(int32 SlotIndex);
 
 	/**
-	 * 에디터 애셋(IMC/IA) 미지정 시 코드로 기본 입력을 생성한다:
-	 * 좌클릭 이동 / 우클릭 기본공격 / Q·W·E 스킬.
-	 * BP에서 애셋을 지정하면 그것이 우선한다.
+	 * 코드로 입력을 생성한다 (키 배치의 단일 소스):
+	 * 좌클릭 이동 / 우클릭 기본공격 / 1·2·3 스킬 / E 상호작용.
+	 * BP/애셋에 지정된 키가 있어도 코드 정의가 우선한다.
+	 * (플레이어 키 커스터마이즈 기능 도입 시 이 정책 재검토)
 	 */
-	void BuildDefaultInputIfNeeded();
+	void BuildRuntimeInput();
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -74,4 +75,5 @@ protected:
 private:
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
+	bool bRuntimeInputBuilt = false;
 };

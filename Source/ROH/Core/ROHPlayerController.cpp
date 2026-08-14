@@ -22,11 +22,13 @@ void AROHPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	BuildDefaultInputIfNeeded();
+	BuildRuntimeInput();
 
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 	{
+		// 다른 경로(BP 등)로 추가된 매핑 제거 후 코드 정의 매핑만 적용
+		Subsystem->ClearAllMappings();
 		if (DefaultMappingContext)
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
@@ -38,13 +40,14 @@ void AROHPlayerController::BeginPlay()
 	SetInputMode(InputMode);
 }
 
-void AROHPlayerController::BuildDefaultInputIfNeeded()
+void AROHPlayerController::BuildRuntimeInput()
 {
-	// BP에서 IMC를 지정했다면 그 세팅을 존중한다
-	if (DefaultMappingContext)
+	// 코드가 키 배치의 단일 소스 — BP/애셋 지정값은 덮어쓴다
+	if (bRuntimeInputBuilt)
 	{
 		return;
 	}
+	bRuntimeInputBuilt = true;
 
 	UInputMappingContext* RuntimeIMC = NewObject<UInputMappingContext>(this, TEXT("IMC_RuntimeDefault"));
 
@@ -64,14 +67,14 @@ void AROHPlayerController::BuildDefaultInputIfNeeded()
 	InteractAction = MakeAction(TEXT("IA_Interact_Runtime"), EKeys::E);
 	DefaultMappingContext = RuntimeIMC;
 
-	UE_LOG(LogROH, Log, TEXT("입력 애셋 미지정 → 코드 기본 입력 사용 (좌클릭 이동 / 우클릭 공격 / 1·2·3 스킬 / E 상호작용)"));
+	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3 스킬 / E 상호작용)"));
 }
 
 void AROHPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	BuildDefaultInputIfNeeded();
+	BuildRuntimeInput();
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
 	{
