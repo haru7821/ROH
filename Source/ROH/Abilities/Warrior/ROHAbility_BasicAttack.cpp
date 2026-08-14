@@ -27,6 +27,7 @@ void UROHAbility_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle H
 	}
 
 	FaceLocation(GetCursorLocation());
+	DebugDrawSwing(Character->GetActorLocation() + Character->GetActorForwardVector() * Range * 0.5f, Range * 0.5f);
 
 	// 물리 피해 = (기본 피해 + 무기 공격력) × (1 + 힘 × 1%)
 	const float Strength = Character->GetAttributeSet()->GetStrength();

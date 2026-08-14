@@ -75,6 +75,8 @@ void UROHAbility_LeapAttack::DoImpact()
 	AROHCharacterBase* Character = GetROHCharacter();
 	if (Character)
 	{
+		DebugDrawSwing(Character->GetActorLocation(), ImpactRadius);
+
 		const float Strength = Character->GetAttributeSet()->GetStrength();
 		const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 		FROHDamageParams Damage;
