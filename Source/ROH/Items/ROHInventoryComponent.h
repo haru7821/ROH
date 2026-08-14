@@ -29,6 +29,9 @@ public:
 	/** 인벤토리 인덱스의 장비를 장착 (해당 슬롯 기존 장비는 인벤토리로) */
 	bool EquipItemByIndex(int32 ItemIndex);
 
+	/** 인벤토리의 첫 번째 장비 아이템을 장착 (E 상호작용용) */
+	bool EquipFirstEquippable();
+
 	bool UnequipSlot(EROHEquipSlot Slot);
 
 	/** 첫 번째 물약 사용 (즉시 회복). M4에서 벨트 슬롯으로 확장 */

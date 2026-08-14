@@ -58,12 +58,13 @@ void AROHPlayerController::BuildDefaultInputIfNeeded()
 
 	SetDestinationAction = MakeAction(TEXT("IA_SetDestination_Runtime"), EKeys::LeftMouseButton);
 	BasicAttackAction = MakeAction(TEXT("IA_BasicAttack_Runtime"), EKeys::RightMouseButton);
-	Skill1Action = MakeAction(TEXT("IA_Skill1_Runtime"), EKeys::Q);
-	Skill2Action = MakeAction(TEXT("IA_Skill2_Runtime"), EKeys::W);
-	Skill3Action = MakeAction(TEXT("IA_Skill3_Runtime"), EKeys::E);
+	Skill1Action = MakeAction(TEXT("IA_Skill1_Runtime"), EKeys::One);
+	Skill2Action = MakeAction(TEXT("IA_Skill2_Runtime"), EKeys::Two);
+	Skill3Action = MakeAction(TEXT("IA_Skill3_Runtime"), EKeys::Three);
+	InteractAction = MakeAction(TEXT("IA_Interact_Runtime"), EKeys::E);
 	DefaultMappingContext = RuntimeIMC;
 
-	UE_LOG(LogROH, Log, TEXT("입력 애셋 미지정 → 코드 기본 입력 사용 (좌클릭 이동 / 우클릭 공격 / Q·W·E 스킬)"));
+	UE_LOG(LogROH, Log, TEXT("입력 애셋 미지정 → 코드 기본 입력 사용 (좌클릭 이동 / 우클릭 공격 / 1·2·3 스킬 / E 상호작용)"));
 }
 
 void AROHPlayerController::SetupInputComponent()
@@ -97,6 +98,18 @@ void AROHPlayerController::SetupInputComponent()
 		{
 			EIC->BindAction(Skill3Action, ETriggerEvent::Started, this, &AROHPlayerController::OnSkill3);
 		}
+		if (InteractAction)
+		{
+			EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AROHPlayerController::OnInteract);
+		}
+	}
+}
+
+void AROHPlayerController::OnInteract()
+{
+	if (AROHPlayerCharacter* PlayerCharacter = Cast<AROHPlayerCharacter>(GetPawn()))
+	{
+		PlayerCharacter->Interact();
 	}
 }
 

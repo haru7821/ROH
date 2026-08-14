@@ -76,6 +76,24 @@ bool UROHInventoryComponent::EquipItemByIndex(int32 ItemIndex)
 	return true;
 }
 
+bool UROHInventoryComponent::EquipFirstEquippable()
+{
+	const UROHItemDatabase* Database = GetDatabase();
+	if (!Database)
+	{
+		return false;
+	}
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
+		if (Base && Base->Kind == EROHItemKind::Equipment && Base->Slot != EROHEquipSlot::None)
+		{
+			return EquipItemByIndex(i);
+		}
+	}
+	return false;
+}
+
 bool UROHInventoryComponent::UnequipSlot(EROHEquipSlot Slot)
 {
 	const FROHItemInstance* Existing = Equipped.Find(Slot);

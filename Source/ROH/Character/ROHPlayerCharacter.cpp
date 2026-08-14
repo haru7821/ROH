@@ -1,7 +1,10 @@
 #include "Character/ROHPlayerCharacter.h"
 #include "Character/ROHAttributeSet.h"
 #include "Items/ROHInventoryComponent.h"
+#include "Loot/ROHItemPickup.h"
 #include "Abilities/ROHAbilitySystemComponent.h"
+#include "EngineUtils.h"
+#include "Engine/Engine.h"
 #include "Abilities/Warrior/ROHAbility_BasicAttack.h"
 #include "Abilities/Warrior/ROHAbility_Bash.h"
 #include "Abilities/Warrior/ROHAbility_Whirlwind.h"
@@ -68,6 +71,44 @@ void AROHPlayerCharacter::ActivateAbilityBySlot(int32 SlotIndex)
 		return;
 	}
 	AbilitySystemComponent->TryActivateAbilityByClass(DefaultAbilities[SlotIndex]);
+}
+
+void AROHPlayerCharacter::Interact()
+{
+	auto ShowMessage = [](const FString& Text)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Cyan, Text);
+		}
+	};
+
+	// 1) 근처 지면 드랍 습득 (인벤토리 가득 등으로 바닥에 남은 것)
+	AROHItemPickup* Nearest = nullptr;
+	float BestDistSq = FMath::Square(250.f);
+	for (TActorIterator<AROHItemPickup> It(GetWorld()); It; ++It)
+	{
+		const float DistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
+		if (DistSq < BestDistSq)
+		{
+			BestDistSq = DistSq;
+			Nearest = *It;
+		}
+	}
+	if (Nearest && Nearest->TryGive(this))
+	{
+		ShowMessage(TEXT("아이템 습득"));
+		return;
+	}
+
+	// 2) 인벤토리의 첫 장비 장착
+	if (Inventory && Inventory->EquipFirstEquippable())
+	{
+		ShowMessage(TEXT("장비 장착 완료 (콘솔 ROHDumpAttrs로 스탯 확인)"));
+		return;
+	}
+
+	ShowMessage(TEXT("상호작용 대상 없음 (장착할 장비/주울 아이템 없음)"));
 }
 
 void AROHPlayerCharacter::HandleDeath(AActor* Killer)

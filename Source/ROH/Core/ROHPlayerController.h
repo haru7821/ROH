@@ -33,6 +33,7 @@ protected:
 	void OnSkill1();
 	void OnSkill2();
 	void OnSkill3();
+	void OnInteract();
 	void ActivateSlot(int32 SlotIndex);
 
 	/**
@@ -52,7 +53,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> BasicAttackAction;
 
-	/** 스킬 1~3 (권장: Q/W/E) */
+	/** 스킬 1~3 (권장: 1/2/3) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> Skill1Action;
 
@@ -61,6 +62,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> Skill3Action;
+
+	/** 상호작용: 주변 드랍 습득 → 없으면 장비 장착 (권장: E) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> InteractAction;
 
 	/** 이 시간(초) 이하로 누르면 클릭 이동, 넘으면 홀드 이동으로 판정 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")

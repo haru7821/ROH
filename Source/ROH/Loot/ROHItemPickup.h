@@ -26,6 +26,9 @@ public:
 	/** 골드 드랍으로 초기화 */
 	void InitAsGold(int32 InGoldAmount);
 
+	/** 플레이어에게 내용물 지급 시도. 성공 시 자신을 파괴하고 true */
+	bool TryGive(class AROHPlayerCharacter* Player);
+
 protected:
 	virtual void BeginPlay() override;
 

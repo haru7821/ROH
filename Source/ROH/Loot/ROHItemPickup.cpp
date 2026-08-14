@@ -77,28 +77,30 @@ void AROHItemPickup::RefreshLabel()
 	}
 }
 
-void AROHItemPickup::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+bool AROHItemPickup::TryGive(AROHPlayerCharacter* Player)
 {
-	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(OtherActor);
-	if (!Player)
-	{
-		return;
-	}
-
-	UROHInventoryComponent* Inventory = Player->FindComponentByClass<UROHInventoryComponent>();
+	UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
 	if (!Inventory)
 	{
-		return;
+		return false;
 	}
 
 	if (GoldAmount > 0)
 	{
 		Inventory->AddGold(GoldAmount);
 		Destroy();
+		return true;
 	}
-	else if (Item.IsValid() && Inventory->AddItem(Item))
+	if (Item.IsValid() && Inventory->AddItem(Item))
 	{
 		Destroy();
+		return true;
 	}
 	// 인벤토리가 가득 차면 바닥에 남는다
+	return false;
+}
+
+void AROHItemPickup::OnSphereOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	TryGive(Cast<AROHPlayerCharacter>(OtherActor));
 }

@@ -23,6 +23,9 @@ public:
 	/** 슬롯 인덱스(DefaultAbilities 순서)로 어빌리티 발동. 0=기본공격, 1~3=스킬 */
 	void ActivateAbilityBySlot(int32 SlotIndex);
 
+	/** E 상호작용: 주변 드랍 습득 → 없으면 인벤토리 첫 장비 장착. NPC 대화 등으로 확장 예정 */
+	void Interact();
+
 	/** 리스폰: 위치 이동 + 상태/자원 복구 */
 	void Revive(const FVector& Location);
 
