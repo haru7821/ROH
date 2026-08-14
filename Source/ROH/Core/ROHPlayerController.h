@@ -35,6 +35,13 @@ protected:
 	void OnSkill3();
 	void ActivateSlot(int32 SlotIndex);
 
+	/**
+	 * 에디터 애셋(IMC/IA) 미지정 시 코드로 기본 입력을 생성한다:
+	 * 좌클릭 이동 / 우클릭 기본공격 / Q·W·E 스킬.
+	 * BP에서 애셋을 지정하면 그것이 우선한다.
+	 */
+	void BuildDefaultInputIfNeeded();
+
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 

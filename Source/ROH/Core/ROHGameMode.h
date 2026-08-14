@@ -18,6 +18,12 @@ public:
 	void SchedulePlayerRespawn(AROHPlayerCharacter* DeadPlayer);
 
 protected:
+	virtual void BeginPlay() override;
+
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Respawn")
 	float RespawnDelay = 3.f;
+
+	/** 맵에 스포너가 없을 때 자동 배치할지 (그레이박스 테스트 편의) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Debug")
+	bool bAutoPlaceSpawnerIfMissing = true;
 };

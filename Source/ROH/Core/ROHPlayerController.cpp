@@ -4,6 +4,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
+#include "InputAction.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/LocalPlayer.h"
@@ -21,17 +22,14 @@ void AROHPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	BuildDefaultInputIfNeeded();
+
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 	{
 		if (DefaultMappingContext)
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
-		}
-		else
-		{
-			UE_LOG(LogROH, Warning,
-				TEXT("DefaultMappingContext가 비어 있습니다. BP_ROHPlayerController에서 IMC를 지정하세요. (docs/05)"));
 		}
 	}
 
@@ -40,9 +38,39 @@ void AROHPlayerController::BeginPlay()
 	SetInputMode(InputMode);
 }
 
+void AROHPlayerController::BuildDefaultInputIfNeeded()
+{
+	// BP에서 IMC를 지정했다면 그 세팅을 존중한다
+	if (DefaultMappingContext)
+	{
+		return;
+	}
+
+	UInputMappingContext* RuntimeIMC = NewObject<UInputMappingContext>(this, TEXT("IMC_RuntimeDefault"));
+
+	auto MakeAction = [this, RuntimeIMC](const TCHAR* Name, const FKey& Key) -> UInputAction*
+	{
+		UInputAction* Action = NewObject<UInputAction>(this, Name);
+		Action->ValueType = EInputActionValueType::Boolean;
+		RuntimeIMC->MapKey(Action, Key);
+		return Action;
+	};
+
+	SetDestinationAction = MakeAction(TEXT("IA_SetDestination_Runtime"), EKeys::LeftMouseButton);
+	BasicAttackAction = MakeAction(TEXT("IA_BasicAttack_Runtime"), EKeys::RightMouseButton);
+	Skill1Action = MakeAction(TEXT("IA_Skill1_Runtime"), EKeys::Q);
+	Skill2Action = MakeAction(TEXT("IA_Skill2_Runtime"), EKeys::W);
+	Skill3Action = MakeAction(TEXT("IA_Skill3_Runtime"), EKeys::E);
+	DefaultMappingContext = RuntimeIMC;
+
+	UE_LOG(LogROH, Log, TEXT("입력 애셋 미지정 → 코드 기본 입력 사용 (좌클릭 이동 / 우클릭 공격 / Q·W·E 스킬)"));
+}
+
 void AROHPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
+
+	BuildDefaultInputIfNeeded();
 
 	if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
 	{
