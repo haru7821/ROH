@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.8",
+	"EngineAssociation": "{58130B99-4763-3F90-209C-D8830CC9CBE8}",
 	"Category": "Game",
 	"Description": "Diablo2-inspired single-player hack-and-slash ARPG",
 	"Modules": [
