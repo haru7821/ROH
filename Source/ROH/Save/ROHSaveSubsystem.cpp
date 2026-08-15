@@ -86,23 +86,14 @@ AROHPlayerCharacter* UROHSaveSubsystem::LoadCharacter(AROHPlayerCharacter* Curre
 	{
 		if (const UROHItemDatabase* Database = GameInstance->GetSubsystem<UROHItemDatabase>())
 		{
-			auto RefreshAffixes = [Database](FROHItemInstance& Item)
-			{
-				for (FROHAffixRoll& Affix : Item.Affixes)
-				{
-					if (const FROHAffixDef* Def = Database->FindAffix(Affix.AffixId))
-					{
-						Affix.Attribute = Def->Attribute;
-					}
-				}
-			};
+			// 공용 헬퍼 (계정 스태시 로드와 동일 규칙 — UROHAccountSubsystem 참조)
 			for (FROHItemInstance& Item : Save->InventoryItems)
 			{
-				RefreshAffixes(Item);
+				Database->RefreshItemAffixes(Item);
 			}
 			for (auto& Pair : Save->EquippedItems)
 			{
-				RefreshAffixes(Pair.Value);
+				Database->RefreshItemAffixes(Pair.Value);
 			}
 		}
 	}

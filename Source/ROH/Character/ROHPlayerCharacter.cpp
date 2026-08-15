@@ -14,6 +14,8 @@
 #include "World/ROHWaypoint.h"
 #include "World/ROHZoneManager.h"
 #include "World/ROHTownNpc.h"
+#include "World/ROHStashChest.h"
+#include "Save/ROHAccountSubsystem.h"
 #include "GameplayEffect.h"
 #include "ROHGameplayTags.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -165,6 +167,52 @@ void AROHPlayerCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 	ApplyDifficultyResistPenalty();
+	ApplyParagonBonuses(); // 계정 공유 — 클래스 전환/로드 후에도 자동 적용
+}
+
+void AROHPlayerCharacter::ApplyParagonBonuses()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (ParagonEffectHandle.IsValid())
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(ParagonEffectHandle);
+		ParagonEffectHandle = FActiveGameplayEffectHandle();
+	}
+
+	const UROHAccountSubsystem* Account = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+	if (!Account)
+	{
+		return;
+	}
+
+	// 장비/패시브/난이도 페널티와 동일 패턴의 런타임 무한 GE — 4분류 합산 (M5 최종 정복자)
+	UGameplayEffect* ParagonEffect = NewObject<UGameplayEffect>(GetTransientPackage());
+	ParagonEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	for (const auto& Pair : Account->GetParagonAllocations())
+	{
+		FGameplayAttribute BonusAttribute;
+		float PerPoint = 0.f;
+		if (Pair.Value <= 0 || !UROHAccountSubsystem::GetParagonCategoryBonus(Pair.Key, BonusAttribute, PerPoint))
+		{
+			continue;
+		}
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = BonusAttribute;
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(PerPoint * Pair.Value));
+		ParagonEffect->Modifiers.Add(Modifier);
+	}
+	if (ParagonEffect->Modifiers.Num() == 0)
+	{
+		return;
+	}
+	ParagonEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+		ParagonEffect, 1.f, AbilitySystemComponent->MakeEffectContext());
 }
 
 void AROHPlayerCharacter::ApplyDifficultyResistPenalty()
@@ -222,12 +270,25 @@ void AROHPlayerCharacter::Tick(float DeltaSeconds)
 	// 성장 상태 표시 (좌상단 두 번째 줄)
 	if (GEngine && IsPlayerControlled() && Progression)
 	{
-		const FString XPText = Progression->GetLevel() >= UROHProgressionComponent::MaxLevel
-			? TEXT("MAX")
-			: FString::Printf(TEXT("%d/%d"), Progression->GetXP(), UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()));
+		// 만렙이면 XP 자리를 정복자 진행으로 대체 (M5 최종)
+		FString GrowthText;
+		const UROHAccountSubsystem* Account = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+		if (Progression->GetLevel() >= UROHProgressionComponent::MaxLevel && Account)
+		{
+			GrowthText = FString::Printf(TEXT("정복자 Lv %d (XP %d/%d) | 정복P %d"),
+				Account->GetParagonLevel(), Account->GetParagonXP(),
+				UROHAccountSubsystem::ParagonXPForNextLevel(Account->GetParagonLevel()),
+				Account->GetParagonPoints());
+		}
+		else
+		{
+			GrowthText = FString::Printf(TEXT("XP %d/%d"),
+				Progression->GetXP(), UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()));
+		}
 		GEngine->AddOnScreenDebugMessage(5, 0.5f, FColor::White,
-			FString::Printf(TEXT("Lv %d | XP %s | 스탯P %d | 스킬P %d | 골드 %d"),
-				Progression->GetLevel(), *XPText,
+			FString::Printf(TEXT("Lv %d | %s | 스탯P %d | 스킬P %d | 골드 %d"),
+				Progression->GetLevel(), *GrowthText,
 				Progression->GetStatPoints(), Progression->GetSkillPoints(),
 				Inventory ? Inventory->GetGold() : 0));
 
@@ -294,7 +355,7 @@ void AROHPlayerCharacter::Interact()
 		return;
 	}
 
-	// 2) 근처 마을 NPC = 벤더 창 (docs/12) — 웨이포인트보다 우선 (마을 중심 근처 겹침 시 NPC 우선)
+	// 2) 근처 마을 NPC/보관함 (300uu — 최근접 우선, 웨이포인트보다 앞 단계)
 	AROHTownNpc* NearNpc = nullptr;
 	float BestNpcDistSq = FMath::Square(300.f);
 	for (TActorIterator<AROHTownNpc> It(GetWorld()); It; ++It)
@@ -305,6 +366,25 @@ void AROHPlayerCharacter::Interact()
 			BestNpcDistSq = NpcDistSq;
 			NearNpc = *It;
 		}
+	}
+	const AROHStashChest* NearChest = nullptr;
+	float BestChestDistSq = FMath::Square(300.f);
+	for (TActorIterator<AROHStashChest> It(GetWorld()); It; ++It)
+	{
+		const float ChestDistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
+		if (ChestDistSq < BestChestDistSq)
+		{
+			BestChestDistSq = ChestDistSq;
+			NearChest = *It;
+		}
+	}
+	if (NearChest && (!NearNpc || BestChestDistSq < BestNpcDistSq))
+	{
+		if (AROHPlayerController* PC = Cast<AROHPlayerController>(GetController()))
+		{
+			PC->OpenStashWindow();
+		}
+		return; // 캐스트 실패 시에도 NPC 분기로 흘러가지 않도록 차단
 	}
 	if (NearNpc)
 	{

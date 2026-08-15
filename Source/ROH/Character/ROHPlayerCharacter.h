@@ -62,6 +62,9 @@ public:
 	/** 현재 난이도의 저항 페널티(악몽 -40/지옥 -100)를 무한 GE로 적용. 난이도 변경 시 재호출 */
 	void ApplyDifficultyResistPenalty();
 
+	/** 정복자 보너스 GE 재적용 (빙의 시 + 투자 직후 — 계정 공유라 클래스 전환/로드에도 유지) */
+	void ApplyParagonBonuses();
+
 	UROHInventoryComponent* GetInventory() const { return Inventory; }
 	UROHProgressionComponent* GetProgression() const { return Progression; }
 	UROHSkillTreeComponent* GetSkillTree() const { return SkillTree; }
@@ -89,6 +92,9 @@ protected:
 private:
 	/** 난이도 저항 페널티 GE 핸들 (재적용 시 제거용) */
 	FActiveGameplayEffectHandle DifficultyPenaltyHandle;
+
+	/** 정복자 보너스 GE 핸들 (재적용 시 제거용) */
+	FActiveGameplayEffectHandle ParagonEffectHandle;
 
 	TWeakObjectPtr<AROHZoneManager> CachedZoneManager;
 };

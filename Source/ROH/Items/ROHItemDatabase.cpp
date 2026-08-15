@@ -942,6 +942,17 @@ FText UROHItemDatabase::GetItemDisplayName(const FROHItemInstance& Instance) con
 	return Base->DisplayName;
 }
 
+void UROHItemDatabase::RefreshItemAffixes(FROHItemInstance& Item) const
+{
+	for (FROHAffixRoll& Affix : Item.Affixes)
+	{
+		if (const FROHAffixDef* Def = FindAffix(Affix.AffixId))
+		{
+			Affix.Attribute = Def->Attribute;
+		}
+	}
+}
+
 FColor UROHItemDatabase::GetQualityColor(EROHItemQuality Quality)
 {
 	// 소유자 확정 팔레트: 흰 일반 / 파랑 매직 / 노랑 레어 / 초록 세트 / 금 유니크 / 자주 룬워드 / 진홍 고대

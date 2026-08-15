@@ -10,6 +10,7 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Save/ROHSaveSubsystem.h"
+#include "Save/ROHAccountSubsystem.h"
 #include "World/ROHZoneManager.h"
 #include "EngineUtils.h"
 #include "AbilitySystemComponent.h"
@@ -639,6 +640,12 @@ void UROHCheatManager::ROHSave()
 	{
 		CheatPrint(SaveSystem->SaveCharacter(Player) ? TEXT("세이브 완료") : TEXT("세이브 실패"));
 	}
+	// 계정 데이터(정복자/스태시)도 함께 저장 (M5 최종 — 별도 슬롯 ROH_Account)
+	if (UROHAccountSubsystem* Account = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr)
+	{
+		Account->SaveAccount();
+	}
 }
 
 void UROHCheatManager::ROHLoad()
@@ -651,6 +658,7 @@ void UROHCheatManager::ROHLoad()
 	{
 		CheatPrint(SaveSystem->LoadCharacter(Player) ? TEXT("로드 완료") : TEXT("로드 실패 (세이브 없음/버전 불일치)"));
 	}
+	// 계정 데이터는 게임 인스턴스 수명 동안 메모리에 상주 (Initialize 1회 로드) — 재로드 불필요
 }
 
 void UROHCheatManager::ROHWarp(int32 ZoneIndex)
@@ -986,5 +994,71 @@ void UROHCheatManager::ROHIdentify()
 		CheatPrint(Identified > 0
 			? FString::Printf(TEXT("감정 완료: %d개 (정식 창구: 마을 셀바 — 개당 50골드)"), Identified)
 			: TEXT("미감정 아이템이 없습니다"));
+	}
+}
+
+void UROHCheatManager::ROHParagon()
+{
+	const UROHAccountSubsystem* Account = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+	if (!Account)
+	{
+		return;
+	}
+
+	CheatPrint(FString::Printf(TEXT("=== 정복자 Lv %d | XP %d/%d | 미배분 포인트 %d (계정 공유) ==="),
+		Account->GetParagonLevel(), Account->GetParagonXP(),
+		UROHAccountSubsystem::ParagonXPForNextLevel(Account->GetParagonLevel()),
+		Account->GetParagonPoints()));
+
+	auto CategoryLabel = [](FName Category) -> const TCHAR*
+	{
+		if (Category == TEXT("Offense"))    { return TEXT("공격 (AttackPower +1/pt)"); }
+		if (Category == TEXT("Defense"))    { return TEXT("방어 (MaxHealth +5/pt)"); }
+		if (Category == TEXT("Precision"))  { return TEXT("정밀 (CritChance +0.1/pt)"); }
+		if (Category == TEXT("RuneAttune")) { return TEXT("룬 조율 (RunePower +0.2/pt)"); }
+		return TEXT("?");
+	};
+	for (const FName& Category : UROHAccountSubsystem::GetParagonCategories())
+	{
+		const int32* Allocated = Account->GetParagonAllocations().Find(Category);
+		CheatPrint(FString::Printf(TEXT("  %s: %s — %d/%d"), *Category.ToString(), CategoryLabel(Category),
+			Allocated ? *Allocated : 0, UROHAccountSubsystem::ParagonCategoryCap));
+	}
+	CheatPrint(TEXT("투자: ROHParagonUp <분류> [개수]"));
+}
+
+void UROHCheatManager::ROHParagonUp(FString Category, int32 Count)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	UROHAccountSubsystem* Account = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+	if (!Player || !Account)
+	{
+		return;
+	}
+
+	Count = FMath::Clamp(Count, 1, 100);
+	int32 Invested = 0;
+	FString Error;
+	for (int32 i = 0; i < Count; ++i)
+	{
+		if (!Account->AllocateParagonPoint(FName(*Category), Error)) // 성공 시마다 내부 즉시 저장
+		{
+			break;
+		}
+		++Invested;
+	}
+
+	if (Invested > 0)
+	{
+		Player->ApplyParagonBonuses(); // 투자 반영 GE 재적용
+		CheatPrint(FString::Printf(TEXT("정복자 투자: %s +%d (잔여 포인트 %d)"),
+			*Category, Invested, Account->GetParagonPoints()));
+	}
+	else
+	{
+		CheatPrint(FString::Printf(TEXT("투자 실패: %s"), *Error));
 	}
 }

@@ -17,7 +17,8 @@ enum class EROHUiWindowKind : uint8
 	Waypoint,
 	Inventory,
 	SkillTree,
-	Vendor
+	Vendor,
+	Stash
 };
 
 /**
@@ -43,6 +44,9 @@ public:
 
 	/** 벤더 창 열기 (docs/12) — NPC 참조가 필요해 ToggleUiWindow와 별도 진입점 */
 	void OpenVendorWindow(AROHTownNpc* Npc);
+
+	/** 계정 보관함 창 열기 (M5 최종 — 토글 의미 유지) */
+	void OpenStashWindow() { ToggleUiWindow(EROHUiWindowKind::Stash); }
 
 protected:
 	virtual void BeginPlay() override;

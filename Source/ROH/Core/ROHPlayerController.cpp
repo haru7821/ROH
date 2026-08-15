@@ -6,6 +6,7 @@
 #include "UI/ROHInventoryWindow.h"
 #include "UI/ROHSkillTreeWindow.h"
 #include "UI/ROHVendorWindow.h"
+#include "UI/ROHStashWindow.h"
 #include "Blueprint/UserWidget.h" // CreateWidget
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -147,7 +148,8 @@ void AROHPlayerController::ToggleUiWindow(EROHUiWindowKind Kind)
 	case EROHUiWindowKind::Waypoint:  WindowClass = UROHWaypointWindow::StaticClass(); break;
 	case EROHUiWindowKind::Inventory: WindowClass = UROHInventoryWindow::StaticClass(); break;
 	case EROHUiWindowKind::SkillTree: WindowClass = UROHSkillTreeWindow::StaticClass(); break;
-	default: break;
+	case EROHUiWindowKind::Stash:     WindowClass = UROHStashWindow::StaticClass(); break;
+	default: break; // Vendor는 OpenVendorWindow 전용 (NPC 참조 필요)
 	}
 	if (!WindowClass)
 	{

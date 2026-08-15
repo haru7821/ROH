@@ -1,7 +1,9 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Character/ROHCharacterBase.h"
 #include "Character/ROHAttributeSet.h"
+#include "Save/ROHAccountSubsystem.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
 #include "ROH.h"
 
 UROHAttributeSet* UROHProgressionComponent::GetAttributeSet() const
@@ -18,8 +20,15 @@ int32 UROHProgressionComponent::XPForNextLevel(int32 InLevel)
 
 void UROHProgressionComponent::GrantXP(int32 Amount)
 {
-	if (Amount <= 0 || Level >= MaxLevel)
+	if (Amount <= 0)
 	{
+		return;
+	}
+
+	// 만렙: 경험치 전액을 정복자로 (M5 최종 — 계정 공유 성장)
+	if (Level >= MaxLevel)
+	{
+		RouteToParagon(Amount);
 		return;
 	}
 
@@ -29,9 +38,21 @@ void UROHProgressionComponent::GrantXP(int32 Amount)
 		XP -= XPForNextLevel(Level);
 		LevelUp();
 	}
-	if (Level >= MaxLevel)
+	// 만렙 도달 프레임의 초과분도 정복자로 이월
+	if (Level >= MaxLevel && XP > 0)
 	{
-		XP = 0; // 정복자 전환은 M5
+		RouteToParagon(XP);
+		XP = 0;
+	}
+}
+
+void UROHProgressionComponent::RouteToParagon(int32 Amount) const
+{
+	const AActor* Owner = GetOwner();
+	UGameInstance* GameInstance = Owner ? Owner->GetGameInstance() : nullptr;
+	if (UROHAccountSubsystem* Account = GameInstance ? GameInstance->GetSubsystem<UROHAccountSubsystem>() : nullptr)
+	{
+		Account->GrantParagonXP(Amount);
 	}
 }
 

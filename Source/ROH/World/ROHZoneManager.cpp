@@ -2,6 +2,7 @@
 #include "World/ROHMonsterSpawner.h"
 #include "World/ROHWaypoint.h"
 #include "World/ROHTownNpc.h"
+#include "World/ROHStashChest.h"
 #include "Character/ROHMonsterCharacter.h"
 #include "Character/ROHBossCharacter.h"
 #include "Campaign/ROHCampaignSubsystem.h"
@@ -97,6 +98,10 @@ void AROHZoneManager::BeginPlay()
 		if (Zone.bTown)
 		{
 			SpawnTownNpcs(Center);
+
+			// 계정 보관함: 웨이포인트 옆 (M5 최종 — 내용물은 UROHAccountSubsystem 소유)
+			GetWorld()->SpawnActor<AROHStashChest>(AROHStashChest::StaticClass(),
+				Center + FVector(300.f, 300.f, 0.f), FRotator::ZeroRotator, SpawnParams);
 		}
 
 		// 스포너 (마을 제외). 스포너의 초기 스폰은 BeginPlay의 0.5초 타이머라 스폰 직후 설정 주입이 안전

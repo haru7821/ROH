@@ -159,4 +159,14 @@ public:
 	/** 전부 무료 감정 (테스트용 — 정식 창구는 셀바, 개당 50골드) */
 	UFUNCTION(Exec)
 	void ROHIdentify();
+
+	// --- M5 최종 정복자 ---
+
+	/** 정복자 상태 출력 (레벨/XP/포인트/분류별 투자) */
+	UFUNCTION(Exec)
+	void ROHParagon();
+
+	/** 정복자 포인트 투자. 예: ROHParagonUp Offense 5 (Offense/Defense/Precision/RuneAttune) */
+	UFUNCTION(Exec)
+	void ROHParagonUp(FString Category, int32 Count = 1);
 };

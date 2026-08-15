@@ -68,6 +68,9 @@ public:
 	/** 아이템 표시명 (등급 반영: "강철의 단검" 등) */
 	FText GetItemDisplayName(const FROHItemInstance& Instance) const;
 
+	/** 세이브 로드 후 접사 Attribute 참조를 DB 기준으로 재해석 (경로 직렬화 의존 제거 — 캐릭터/계정 세이브 공용) */
+	void RefreshItemAffixes(FROHItemInstance& Item) const;
+
 	static FColor GetQualityColor(EROHItemQuality Quality);
 
 private:

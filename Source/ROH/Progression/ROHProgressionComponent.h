@@ -8,7 +8,7 @@
  * 경험치/레벨/스탯 포인트 (docs/02 §1.3, §2.1)
  * - 레벨업: 스탯 포인트 +5, 스킬 포인트 +1, 완전 회복
  * - 스탯 분배는 어트리뷰트 베이스에 직접 반영 + 파생 스탯 갱신
- * - 최대 레벨 50 (이후 정복자 시스템은 M5)
+ * - 최대 레벨 50 — 이후 획득 XP는 계정 정복자(UROHAccountSubsystem)로 라우팅
  */
 UCLASS(ClassGroup = (ROH), meta = (BlueprintSpawnableComponent))
 class ROH_API UROHProgressionComponent : public UActorComponent
@@ -41,6 +41,9 @@ private:
 	void LevelUp();
 	void ApplyStatToAttributes(FName StatName, int32 Points) const;
 	class UROHAttributeSet* GetAttributeSet() const;
+
+	/** 만렙 잉여 경험치 → 계정 정복자 (M5 최종, docs/02) */
+	void RouteToParagon(int32 Amount) const;
 
 	int32 Level = 1;
 	int32 XP = 0;
