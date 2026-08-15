@@ -14,6 +14,7 @@ namespace ROHGameplayTags
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_Cooldown);
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BuffAttackPower);
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BuffDefense);
+	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Data_BuffAttackSpeed); // 광란 (b30)
 
 	// 상태
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(State_Dead);
@@ -32,5 +33,10 @@ namespace ROHGameplayTags
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Meteor);
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Blizzard);
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_StaticField);
+	// 스킬트리 증분 (b30)
+	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Charge);
+	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_Frenzy);
+	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_FlameWave);
+	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Skill_ChainLightning);
 	ROH_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Cooldown_Monster_Attack);
 }

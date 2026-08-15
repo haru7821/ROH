@@ -6,6 +6,8 @@
 #include "Abilities/Warrior/ROHAbility_LeapAttack.h"
 #include "Abilities/Warrior/ROHAbility_Execute.h"
 #include "Abilities/Warrior/ROHAbility_BattleShout.h"
+#include "Abilities/Warrior/ROHAbility_Charge.h"
+#include "Abilities/Warrior/ROHAbility_Frenzy.h"
 #include "Abilities/Elementalist/ROHElementalistAbilities.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
@@ -67,8 +69,9 @@ namespace
 
 const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass InPlayerClass)
 {
-	// M3 2차: 클래스당 10스킬 × 3계열 (목표 24~30은 M4 이후 증분 — docs/02 §2.1)
-	// 티어: 요구 레벨 1 / 6 / 12 / 18 / 24
+	// M3 2차: 클래스당 10스킬 × 3계열 → b30 증분: 클래스당 15스킬 (액티브 +2, 패시브 +3 —
+	// 패시브는 b29 % 배율 어트리뷰트 활용). 목표 24~30은 이후 증분 — docs/02 §2.1
+	// 티어: 요구 레벨 1 / 6 / 12 / 18 / 24. 계열별로 연속 배치 (스킬트리 창 섹션 헤더 규칙)
 	static const TArray<FROHSkillDef> WarriorSkills = {
 		// --- 무기술 (Arms) ---
 		MakeActive(TEXT("Bash"), TEXT("강타"), TEXT("무기술"), EROHPlayerClass::Warrior, 1, NAME_None,
@@ -79,10 +82,14 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			UROHAbility_LeapAttack::StaticClass(), { Syn(TEXT("Bash")), Syn(TEXT("Whirlwind")) }),
 		MakeActive(TEXT("Execute"), TEXT("처형"), TEXT("무기술"), EROHPlayerClass::Warrior, 18, TEXT("Bash"),
 			UROHAbility_Execute::StaticClass(), { Syn(TEXT("Bash"), 10.f), Syn(TEXT("Whirlwind")) }),
+		MakeActive(TEXT("Charge"), TEXT("돌진"), TEXT("무기술"), EROHPlayerClass::Warrior, 24, TEXT("Leap"),
+			UROHAbility_Charge::StaticClass(), { Syn(TEXT("Bash")), Syn(TEXT("Leap")) }), // b30
 
 		// --- 전장의 함성 (Warcries) ---
 		MakeActive(TEXT("BattleShout"), TEXT("전투의 함성"), TEXT("전장의 함성"), EROHPlayerClass::Warrior, 6, NAME_None,
 			UROHAbility_BattleShout::StaticClass(), { Syn(TEXT("IronWill")) }),
+		MakeActive(TEXT("Frenzy"), TEXT("광란"), TEXT("전장의 함성"), EROHPlayerClass::Warrior, 12, TEXT("BattleShout"),
+			UROHAbility_Frenzy::StaticClass(), {}), // b30 — 버프 수치는 랭크식 (시너지 미사용)
 		MakePassive(TEXT("IronWill"), TEXT("불굴"), TEXT("전장의 함성"), EROHPlayerClass::Warrior, 18, TEXT("BattleShout"),
 			{ Bonus(UROHAttributeSet::GetFireResistanceAttribute(), 2.f),
 			  Bonus(UROHAttributeSet::GetColdResistanceAttribute(), 2.f),
@@ -90,6 +97,8 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			  Bonus(UROHAttributeSet::GetPoisonResistanceAttribute(), 2.f),
 			  Bonus(UROHAttributeSet::GetShadowResistanceAttribute(), 2.f),
 			  Bonus(UROHAttributeSet::GetPhysicalResistanceAttribute(), 1.f) }), // PhysicalResistance = PDR (docs/10 §4.3)
+		MakePassive(TEXT("BattleRecovery"), TEXT("전장 회복"), TEXT("전장의 함성"), EROHPlayerClass::Warrior, 24, TEXT("BattleShout"),
+			{ Bonus(UROHAttributeSet::GetHealthRegenAttribute(), 0.5f) }), // b30
 
 		// --- 투지 (Fortitude) ---
 		MakePassive(TEXT("WeaponMastery"), TEXT("무기 숙련"), TEXT("투지"), EROHPlayerClass::Warrior, 1, NAME_None,
@@ -98,8 +107,12 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			{ Bonus(UROHAttributeSet::GetDefenseAttribute(), 6.f) }),
 		MakePassive(TEXT("Toughness"), TEXT("강인함"), TEXT("투지"), EROHPlayerClass::Warrior, 12, TEXT("IronSkin"),
 			{ Bonus(UROHAttributeSet::GetMaxHealthAttribute(), 8.f) }),
+		MakePassive(TEXT("SlaughterInstinct"), TEXT("학살 본능"), TEXT("투지"), EROHPlayerClass::Warrior, 18, TEXT("WeaponMastery"),
+			{ Bonus(UROHAttributeSet::GetPhysicalDamagePctAttribute(), 3.f) }), // b30 — % 배율 (docs/10 §3.1)
 		MakePassive(TEXT("BattleFocus"), TEXT("전투 감각"), TEXT("투지"), EROHPlayerClass::Warrior, 24, TEXT("WeaponMastery"),
 			{ Bonus(UROHAttributeSet::GetAttackRatingAttribute(), 25.f) }),
+		MakePassive(TEXT("Grit"), TEXT("강골"), TEXT("투지"), EROHPlayerClass::Warrior, 24, TEXT("Toughness"),
+			{ Bonus(UROHAttributeSet::GetHealthPctAttribute(), 2.f) }), // b30 — % 배율 (docs/10 §2)
 	};
 
 	static const TArray<FROHSkillDef> ElementalistSkills = {
@@ -108,8 +121,12 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			UROHAbility_Fireball::StaticClass(), { Syn(TEXT("Ignite"), 16.f), Syn(TEXT("Meteor"), 16.f) }),
 		MakePassive(TEXT("Ignite"), TEXT("발화"), TEXT("화염"), EROHPlayerClass::Elementalist, 6, TEXT("Fireball"),
 			{ Bonus(UROHAttributeSet::GetEnergyAttribute(), 2.f) }),
+		MakeActive(TEXT("FlameWave"), TEXT("불꽃 파도"), TEXT("화염"), EROHPlayerClass::Elementalist, 12, TEXT("Fireball"),
+			UROHAbility_FlameWave::StaticClass(), { Syn(TEXT("Fireball")), Syn(TEXT("Ignite")) }), // b30
 		MakeActive(TEXT("Meteor"), TEXT("운석"), TEXT("화염"), EROHPlayerClass::Elementalist, 18, TEXT("Fireball"),
 			UROHAbility_Meteor::StaticClass(), { Syn(TEXT("Fireball")), Syn(TEXT("Ignite")) }),
+		MakePassive(TEXT("Combustion"), TEXT("연소 정통"), TEXT("화염"), EROHPlayerClass::Elementalist, 24, TEXT("Ignite"),
+			{ Bonus(UROHAttributeSet::GetElementalDamagePctAttribute(), 3.f) }), // b30 — % 배율 (docs/10 §3.1)
 
 		// --- 냉기 (Cold) ---
 		MakeActive(TEXT("IceBolt"), TEXT("얼음화살"), TEXT("냉기"), EROHPlayerClass::Elementalist, 1, NAME_None,
@@ -118,6 +135,8 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			UROHAbility_FrostNova::StaticClass(), { Syn(TEXT("IceBolt")), Syn(TEXT("Blizzard")) }),
 		MakePassive(TEXT("IceArmor"), TEXT("빙갑"), TEXT("냉기"), EROHPlayerClass::Elementalist, 12, NAME_None,
 			{ Bonus(UROHAttributeSet::GetDefenseAttribute(), 8.f) }),
+		MakePassive(TEXT("IceCrystal"), TEXT("얼음 결정"), TEXT("냉기"), EROHPlayerClass::Elementalist, 18, TEXT("IceArmor"),
+			{ Bonus(UROHAttributeSet::GetManaPctAttribute(), 2.f) }), // b30 — % 배율 (docs/10 §2)
 		MakeActive(TEXT("Blizzard"), TEXT("눈보라"), TEXT("냉기"), EROHPlayerClass::Elementalist, 24, TEXT("FrostNova"),
 			UROHAbility_Blizzard::StaticClass(), { Syn(TEXT("IceBolt")), Syn(TEXT("FrostNova")) }),
 
@@ -128,6 +147,10 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			UROHAbility_Teleport::StaticClass(), {}),
 		MakeActive(TEXT("StaticField"), TEXT("정전기장"), TEXT("번개"), EROHPlayerClass::Elementalist, 18, NAME_None,
 			UROHAbility_StaticField::StaticClass(), {}),
+		MakeActive(TEXT("ChainLightning"), TEXT("연쇄 번개"), TEXT("번개"), EROHPlayerClass::Elementalist, 24, TEXT("StaticField"),
+			UROHAbility_ChainLightning::StaticClass(), { Syn(TEXT("StaticField")), Syn(TEXT("Overcharge")) }), // b30
+		MakePassive(TEXT("Overcharge"), TEXT("과충전"), TEXT("번개"), EROHPlayerClass::Elementalist, 24, TEXT("StaticField"),
+			{ Bonus(UROHAttributeSet::GetGlobalDamagePctAttribute(), 1.f) }), // b30 — 전체 % (희소 옵션이라 보수적)
 	};
 
 	return InPlayerClass == EROHPlayerClass::Warrior ? WarriorSkills : ElementalistSkills;

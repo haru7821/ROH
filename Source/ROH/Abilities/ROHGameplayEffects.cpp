@@ -63,3 +63,18 @@ UROHBattleShoutEffect::UROHBattleShoutEffect()
 	AddSetByCallerModifier(UROHAttributeSet::GetAttackPowerAttribute(), ROHGameplayTags::Data_BuffAttackPower);
 	AddSetByCallerModifier(UROHAttributeSet::GetDefenseAttribute(), ROHGameplayTags::Data_BuffDefense);
 }
+
+UROHFrenzyEffect::UROHFrenzyEffect()
+{
+	DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	DurationMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Duration));
+
+	FSetByCallerFloat SetByCaller;
+	SetByCaller.DataTag = ROHGameplayTags::Data_BuffAttackSpeed;
+
+	FGameplayModifierInfo Modifier;
+	Modifier.Attribute = UROHAttributeSet::GetAttackSpeedPctAttribute();
+	Modifier.ModifierOp = EGameplayModOp::Additive;
+	Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCaller);
+	Modifiers.Add(Modifier);
+}

@@ -57,3 +57,20 @@ public:
 
 	static constexpr float Duration = 15.f;
 };
+
+/**
+ * 광란 버프 (b30): 8초간 공격 속도 % 증가 (AttackSpeedPct Additive — 만료 시 자동 원복).
+ * 증가량은 SetByCaller(Data.Buff.AttackSpeed)로 전달 (기본 20% + 랭크당 5%).
+ * 재시전 시 어빌리티가 기존 효과를 제거 후 새로 적용한다 (BattleShout과 동일 중첩 방지 패턴).
+ * 버프 중 발동한 공격 어빌리티의 쿨다운은 ApplyCooldown의 %AS 항으로 자연 단축된다 (docs/10 §3.4).
+ */
+UCLASS()
+class ROH_API UROHFrenzyEffect : public UGameplayEffect
+{
+	GENERATED_BODY()
+
+public:
+	UROHFrenzyEffect();
+
+	static constexpr float Duration = 8.f;
+};

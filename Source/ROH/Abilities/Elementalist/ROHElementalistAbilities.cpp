@@ -463,3 +463,144 @@ void UROHAbility_StaticField::ActivateAbility(const FGameplayAbilitySpecHandle H
 
 	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 }
+
+// ---------- 불꽃 파도 (b30) ----------
+
+UROHAbility_FlameWave::UROHAbility_FlameWave()
+{
+	SkillId = TEXT("FlameWave");
+	CostAttribute = UROHAttributeSet::GetManaAttribute();
+	CostAmount = 20.f;
+	CooldownDuration = 4.f;
+	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_FlameWave);
+	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
+}
+
+void UROHAbility_FlameWave::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!CheckSkillInvested())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	AROHCharacterBase* Caster = GetROHCharacter();
+	if (Caster)
+	{
+		// 커서 방향 부채꼴 (FrostNova의 원형 판정을 방향성 콘으로 — GetHostileTargetsInCone 재사용)
+		FaceLocation(GetCursorLocation());
+		DebugDrawSwing(Caster->GetActorLocation() + Caster->GetActorForwardVector() * Range * 0.5f, Range * 0.5f);
+
+		// 원피해에 자체 에너지 항 금지 — INT/% 배율은 ApplyDamage 파이프라인이 일괄 적용 (docs/10 §3.1, b29)
+		FROHDamageParams Damage;
+		Damage.FireDamage = BaseDamage * GetSkillDamageMultiplier();
+		Damage.bUseAttackRoll = false;
+
+		for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInCone(Caster, Range, ConeHalfAngle))
+		{
+			if (UROHCombatStatics::ApplyDamage(Caster, Target, Damage))
+			{
+				PlayHitFeedback(Target);
+			}
+		}
+	}
+
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}
+
+// ---------- 연쇄 번개 (b30) ----------
+
+UROHAbility_ChainLightning::UROHAbility_ChainLightning()
+{
+	SkillId = TEXT("ChainLightning");
+	CostAttribute = UROHAttributeSet::GetManaAttribute();
+	CostAmount = 15.f;
+	CooldownDuration = 3.f;
+	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_ChainLightning);
+	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
+}
+
+void UROHAbility_ChainLightning::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	if (!CheckSkillInvested())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	AROHCharacterBase* Caster = GetROHCharacter();
+	if (Caster)
+	{
+		FaceLocation(GetCursorLocation());
+
+		// 첫 대상: 커서 방향 부채꼴 내 최근접 적 (Bash의 단일 대상 선정 관례)
+		AROHCharacterBase* Current = nullptr;
+		float BestDistSq = TNumericLimits<float>::Max();
+		for (AROHCharacterBase* Candidate : UROHCombatStatics::GetHostileTargetsInCone(Caster, CastRange, 45.f))
+		{
+			const float DistSq = FVector::DistSquared(Caster->GetActorLocation(), Candidate->GetActorLocation());
+			if (DistSq < BestDistSq)
+			{
+				BestDistSq = DistSq;
+				Current = Candidate;
+			}
+		}
+
+		// 연쇄: 직전 피격자 기준 반경 내 최근접 미피격 적으로 도약, 도약마다 ×0.7
+		// 원피해에 자체 에너지 항 금지 — INT/% 배율은 ApplyDamage 파이프라인이 일괄 적용 (docs/10 §3.1, b29)
+		float HopDamage = BaseDamage * GetSkillDamageMultiplier();
+		TArray<AROHCharacterBase*> AlreadyHit;
+		FVector PreviousLocation = Caster->GetActorLocation();
+
+		while (Current && AlreadyHit.Num() <= MaxChains)
+		{
+			FROHDamageParams Damage;
+			Damage.LightningDamage = HopDamage;
+			Damage.bUseAttackRoll = false;
+
+			// 그레이박스: 번개 연결선 (시전자→첫 대상→연쇄 대상)
+			DrawDebugLine(Caster->GetWorld(), PreviousLocation + FVector(0.f, 0.f, 50.f),
+				Current->GetActorLocation() + FVector(0.f, 0.f, 50.f), FColor::Cyan, false, 0.35f, 0, 4.f);
+
+			if (UROHCombatStatics::ApplyDamage(Caster, Current, Damage))
+			{
+				PlayHitFeedback(Current);
+			}
+			AlreadyHit.Add(Current);
+			PreviousLocation = Current->GetActorLocation();
+			HopDamage *= ChainDamageFalloff;
+
+			// 다음 대상 (같은 적 재타격 금지)
+			AROHCharacterBase* Next = nullptr;
+			float NextBestDistSq = TNumericLimits<float>::Max();
+			for (AROHCharacterBase* Candidate : UROHCombatStatics::GetHostileTargetsInRadius(Caster, PreviousLocation, ChainRadius))
+			{
+				if (AlreadyHit.Contains(Candidate))
+				{
+					continue;
+				}
+				const float DistSq = FVector::DistSquared(PreviousLocation, Candidate->GetActorLocation());
+				if (DistSq < NextBestDistSq)
+				{
+					NextBestDistSq = DistSq;
+					Next = Candidate;
+				}
+			}
+			Current = Next;
+		}
+	}
+
+	EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+}

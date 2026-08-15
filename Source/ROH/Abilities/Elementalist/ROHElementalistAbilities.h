@@ -170,3 +170,61 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
 	float BaseHealthPercent = 0.2f;
 };
+
+/** 불꽃 파도 (b30): 커서 방향 전방 부채꼴 화염 피해 (화염 계열 중위기) */
+UCLASS()
+class ROH_API UROHAbility_FlameWave : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_FlameWave();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float BaseDamage = 32.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float Range = 600.f;
+
+	/** 부채꼴 반각 (도) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ConeHalfAngle = 45.f;
+};
+
+/**
+ * 연쇄 번개 (b30, 번개 계열 상위기): 커서 방향 첫 대상 명중 후 근접한 다음 적으로
+ * 최대 3회 연쇄 (같은 적 재타격 금지), 연쇄마다 피해 ×0.7.
+ */
+UCLASS()
+class ROH_API UROHAbility_ChainLightning : public UROHGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UROHAbility_ChainLightning();
+
+protected:
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float BaseDamage = 30.f;
+
+	/** 첫 대상 탐색 사거리 (커서 방향 부채꼴) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float CastRange = 800.f;
+
+	/** 연쇄 탐색 반경 (직전 피격자 기준) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ChainRadius = 500.f;
+
+	/** 첫 대상 이후 최대 연쇄 횟수 */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	int32 MaxChains = 3;
+
+	/** 연쇄당 피해 감쇄 배율 */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Skill")
+	float ChainDamageFalloff = 0.7f;
+};
