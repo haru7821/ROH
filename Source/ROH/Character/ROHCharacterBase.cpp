@@ -4,6 +4,7 @@
 #include "Character/ROHAttributeSet.h"
 #include "Character/ROHMonsterCharacter.h"
 #include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Core/ROHProceduralVisual.h" // 프로시저럴 조형 (b33)
 #include "Materials/MaterialInterface.h"
 #include "ROHGameplayTags.h"
 #include "GameplayEffect.h" // b29 % 배율 무한 GE 구성
@@ -71,8 +72,8 @@ void AROHCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 비주얼 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — BeginPlay에서 수행):
-	// 애셋 카탈로그 우선 (M6 1차, b32 — 임포트만 하면 교체), 없으면 기존 그레이박스 그대로
+	// 비주얼 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — BeginPlay에서 수행). 우선순위 (b33):
+	// 카탈로그 애셋(임포트본) → 프로시저럴 조형(기본값) → 단순 그레이박스(도형 로드 실패 안전망)
 	if (VisualMesh && !VisualMesh->GetStaticMesh())
 	{
 		UStaticMesh* BodyMesh = nullptr;
@@ -83,7 +84,18 @@ void AROHCharacterBase::BeginPlay()
 			BodyMesh = ROHAssetCatalog::LoadMesh(CatalogKey);
 			bCatalogMesh = BodyMesh != nullptr;
 		}
-		if (!BodyMesh)
+
+		// 프로시저럴 조형 (b33): 카탈로그가 없을 때 VisualMesh를 빈 컨테이너로 쓰고 파트를 부착
+		// (HandleDeath의 눕히기 회전이 컨테이너째 적용). 성공 시 단일 메시는 설정하지 않는다.
+		bool bProceduralBuilt = false;
+		if (!bCatalogMesh && !CatalogKey.IsNone())
+		{
+			VisualMesh->SetRelativeScale3D(FVector(1.f)); // 생성자 캡슐 스케일 제거 — 파트 왜곡 방지
+			bProceduralBuilt = ROHProceduralVisual::BuildCharacterVisual(*this, *VisualMesh, CatalogKey,
+				GetCapsuleComponent()->GetScaledCapsuleRadius(), GetCapsuleComponent()->GetScaledCapsuleHalfHeight());
+		}
+
+		if (!bCatalogMesh && !bProceduralBuilt)
 		{
 			BodyMesh = LoadGrayboxBodyMesh();
 		}
@@ -107,7 +119,7 @@ void AROHCharacterBase::BeginPlay()
 				}
 			}
 		}
-		else
+		else if (!bProceduralBuilt)
 		{
 			// 마지막 안전망: 캡슐 콜리전 와이어프레임이라도 게임 중 표시
 			GetCapsuleComponent()->SetHiddenInGame(false);

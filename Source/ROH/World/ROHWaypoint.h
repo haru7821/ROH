@@ -6,6 +6,7 @@
 
 class USphereComponent;
 class UStaticMeshComponent;
+class UMaterialInstanceDynamic;
 
 /**
  * 웨이포인트 (docs/04 M4): 지역 중심에 서는 기둥.
@@ -49,4 +50,16 @@ protected:
 private:
 	int32 ZoneIndex = 0;
 	FText ZoneName;
+
+	// --- 프로시저럴 조형 (b33) ---
+	/** 꼭대기 크리스탈 (틱에서 천천히 회전 — 유일한 회전 연출) */
+	UPROPERTY()
+	TObjectPtr<UStaticMeshComponent> CrystalMesh;
+
+	/** 크리스탈 MID (활성 전환 시 재채색) */
+	UPROPERTY()
+	TObjectPtr<UMaterialInstanceDynamic> CrystalMid;
+
+	/** 마지막으로 반영한 활성 상태 (전환 감지용) */
+	bool bCrystalVisualActive = false;
 };

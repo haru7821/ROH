@@ -1,6 +1,7 @@
 #include "Combat/ROHProjectile.h"
 #include "Character/ROHCharacterBase.h"
 #include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Core/ROHProceduralVisual.h" // 속성색 MID (b33)
 #include "Materials/MaterialInterface.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -31,6 +32,16 @@ namespace
 		Consider(Damage.LightningDamage, TEXT("SM_Projectile_Lightning"));
 		Consider(Damage.ShadowDamage, TEXT("SM_Projectile_Shadow"));
 		return BestKey; // 원소 피해가 없으면 None → 공용 키만 시도
+	}
+
+	// 속성 키 → 속성색 (b33 — 카탈로그 부재 시 그레이박스 구 채색). 물리 등은 false = 기본색 유지
+	bool ProjectileElementColor(FName TypeKey, FLinearColor& OutColor)
+	{
+		if (TypeKey == TEXT("SM_Projectile_Fire"))      { OutColor = FLinearColor(1.00f, 0.45f, 0.05f); return true; } // 주황
+		if (TypeKey == TEXT("SM_Projectile_Ice"))       { OutColor = FLinearColor(0.40f, 0.80f, 1.00f); return true; } // 하늘
+		if (TypeKey == TEXT("SM_Projectile_Lightning")) { OutColor = FLinearColor(1.00f, 0.95f, 0.30f); return true; } // 노랑
+		if (TypeKey == TEXT("SM_Projectile_Shadow"))    { OutColor = FLinearColor(0.60f, 0.20f, 0.90f); return true; } // 보라
+		return false;
 	}
 }
 
@@ -107,10 +118,11 @@ void AROHProjectile::InitProjectile(AROHCharacterBase* InSource, const FROHDamag
 	ProjectileMovement->Velocity = GetActorForwardVector() * Speed;
 
 	// 카탈로그 메시 (b32): 피해 유형은 여기서 확정되므로 BeginPlay(그레이박스)가 아닌 이 시점에 교체.
-	// 속성별 키(화염/냉기/번개/그림자) 우선 → 공용 SM_Projectile → 없으면 그레이박스 구체 유지.
+	// 속성별 키(화염/냉기/번개/그림자) 우선 → 공용 SM_Projectile → 없으면 그레이박스 구체에 속성색 (b33).
 	if (VisualMesh)
 	{
-		FName ProjectileCatalogKey = ProjectileCatalogMeshKey(DamageParams);
+		const FName ElementTypeKey = ProjectileCatalogMeshKey(DamageParams);
+		FName ProjectileCatalogKey = ElementTypeKey;
 		UStaticMesh* CatalogMesh = ROHAssetCatalog::LoadMesh(ProjectileCatalogKey);
 		if (!CatalogMesh)
 		{
@@ -129,6 +141,16 @@ void AROHProjectile::InitProjectile(AROHCharacterBase* InSource, const FROHDamag
 			if (UMaterialInterface* OverrideMaterial = ROHAssetCatalog::LoadMaterialForMeshKey(ProjectileCatalogKey))
 			{
 				VisualMesh->SetMaterial(0, OverrideMaterial);
+			}
+		}
+		else
+		{
+			// 프로시저럴 채색 (b33): 그레이박스 구를 속성색으로 (물리 등 비원소는 기본색 유지).
+			// 발광 파라미터가 기본 머티리얼에 없어 색만 — 우아한 강등 (크래시/로그 없음)
+			FLinearColor ElementColor;
+			if (ProjectileElementColor(ElementTypeKey, ElementColor))
+			{
+				ROHProceduralVisual::ApplyColor(VisualMesh, ElementColor);
 			}
 		}
 	}

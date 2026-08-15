@@ -1,5 +1,6 @@
 #include "World/ROHTownNpc.h"
 #include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Core/ROHProceduralVisual.h" // 프로시저럴 조형 (b33)
 #include "Materials/MaterialInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -106,6 +107,28 @@ void AROHTownNpc::BeginPlay()
 		const FName NpcCatalogKey = NpcCatalogMeshKey(NpcRole);
 		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(NpcCatalogKey);
 		const bool bCatalogMesh = Mesh != nullptr;
+
+		// 프로시저럴 조형 (b33): 기둥 대신 사람 실루엣 — 몸통(역할색)+머리(살구)+로브 어깨(역할색 어둡게).
+		// 이름/역할/링 표시 로직은 무변경 (틱이 계속 담당)
+		if (!bCatalogMesh)
+		{
+			using namespace ROHProceduralVisual;
+			const FLinearColor RoleColor = FLinearColor::FromSRGBColor(GetRoleColor());
+			UStaticMeshComponent* BodyPart = AddPart(*this, *PillarMesh, EROHBasicShape::Cylinder,
+				FVector(0.f, 0.f, 65.f), FRotator::ZeroRotator, FVector(56.f, 56.f, 130.f), RoleColor);
+			if (BodyPart)
+			{
+				AddPart(*this, *PillarMesh, EROHBasicShape::Cone,
+					FVector(0.f, 0.f, 128.f), FRotator::ZeroRotator, FVector(72.f, 72.f, 50.f),
+					RoleColor * 0.45f); // 로브 어깨 (역할색 어둡게)
+				AddPart(*this, *PillarMesh, EROHBasicShape::Sphere,
+					FVector(0.f, 0.f, 172.f), FRotator::ZeroRotator, FVector(42.f, 42.f, 42.f),
+					FLinearColor(1.f, 0.76f, 0.60f)); // 살구색 머리
+				return; // 조형 성공 — 단일 기둥 메시는 만들지 않는다
+			}
+			// 몸통(핵심 파트) 실패 시 아래 그레이박스 안전망으로
+		}
+
 		if (!Mesh)
 		{
 			Mesh = LoadNpcPillarMesh();

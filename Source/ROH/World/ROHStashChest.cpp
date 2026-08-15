@@ -1,5 +1,6 @@
 #include "World/ROHStashChest.h"
 #include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Core/ROHProceduralVisual.h" // 프로시저럴 조형 (b33)
 #include "Materials/MaterialInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -48,12 +49,33 @@ void AROHStashChest::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 카탈로그(SM_StashChest) 우선, 없으면 기존 그레이박스 상자 그대로 (b32)
+	// 우선순위 (b33): 카탈로그(SM_StashChest) → 프로시저럴 조형(몸체+뚜껑+금띠) → 그레이박스 상자
 	if (ChestMesh && !ChestMesh->GetStaticMesh())
 	{
 		static const FName ChestCatalogKey(TEXT("SM_StashChest"));
 		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(ChestCatalogKey);
 		const bool bCatalogMesh = Mesh != nullptr;
+
+		// 프로시저럴 조형 (b33): ChestMesh를 빈 컨테이너로 쓰고 파트 부착 (노랑 계열 — 미니맵 톤 일치)
+		if (!bCatalogMesh)
+		{
+			using namespace ROHProceduralVisual;
+			UStaticMeshComponent* BodyPart = AddPart(*this, *ChestMesh, EROHBasicShape::Cube,
+				FVector(0.f, 0.f, 28.f), FRotator::ZeroRotator, FVector(90.f, 70.f, 56.f),
+				FLinearColor(0.32f, 0.18f, 0.07f)); // 짙은 갈색 몸체
+			if (BodyPart)
+			{
+				AddPart(*this, *ChestMesh, EROHBasicShape::Cube,
+					FVector(-4.f, 0.f, 62.f), FRotator(-10.f, 0.f, 0.f), FVector(94.f, 74.f, 18.f),
+					FLinearColor(0.42f, 0.25f, 0.10f)); // 살짝 기울인 뚜껑
+				AddPart(*this, *ChestMesh, EROHBasicShape::Cube,
+					FVector(44.f, 0.f, 30.f), FRotator::ZeroRotator, FVector(6.f, 72.f, 14.f),
+					FLinearColor(1.00f, 0.78f, 0.20f)); // 앞면 가로 금색 띠
+				return; // 조형 성공 — 단일 상자 메시는 만들지 않는다 (링/안내 틱은 계속 담당)
+			}
+			// 몸체(핵심 파트) 실패 시 아래 그레이박스 안전망으로
+		}
+
 		if (!Mesh)
 		{
 			Mesh = LoadChestMesh();

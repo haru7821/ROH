@@ -2,7 +2,9 @@
 #include "Campaign/ROHCampaignSubsystem.h"
 #include "Character/ROHPlayerCharacter.h"
 #include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Core/ROHProceduralVisual.h" // 프로시저럴 조형 (b33)
 #include "Materials/MaterialInterface.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -31,6 +33,12 @@ namespace
 			}
 		}
 		return nullptr;
+	}
+
+	// 크리스탈 색 (b33): 활성 = 밝은 파랑, 비활성 = 어두운 회청
+	FLinearColor WaypointCrystalColor(bool bActive)
+	{
+		return bActive ? FLinearColor(0.25f, 0.70f, 1.00f) : FLinearColor(0.15f, 0.20f, 0.30f);
 	}
 }
 
@@ -65,13 +73,41 @@ void AROHWaypoint::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 기둥 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — CharacterBase와 동일 사유):
-	// 카탈로그(SM_Waypoint) 우선, 없으면 기존 그레이박스 기둥 그대로 (b32)
+	// 기둥 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — CharacterBase와 동일 사유). 우선순위 (b33):
+	// 카탈로그(SM_Waypoint) → 프로시저럴 조형(받침+기둥+크리스탈) → 그레이박스 기둥(안전망)
 	if (PillarMesh && !PillarMesh->GetStaticMesh())
 	{
 		static const FName WaypointCatalogKey(TEXT("SM_Waypoint"));
 		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(WaypointCatalogKey);
 		const bool bCatalogMesh = Mesh != nullptr;
+
+		// 프로시저럴 조형 (b33): PillarMesh를 빈 컨테이너로 쓰고 파트 부착
+		if (!bCatalogMesh)
+		{
+			using namespace ROHProceduralVisual;
+			// 게이트는 첫 파트(받침) — 상자/NPC와 동일 규칙 (Sup b33 지적: 뒤쪽 파트 게이트는
+			// 부분 실패 시 이미 부착된 파트 + 그레이박스 폴백이 겹쳐 이중 렌더가 된다)
+			UStaticMeshComponent* BasePart = AddPart(*this, *PillarMesh, EROHBasicShape::Cylinder,
+				FVector(0.f, 0.f, 12.f), FRotator::ZeroRotator, FVector(150.f, 150.f, 24.f),
+				FLinearColor(0.30f, 0.32f, 0.38f)); // 넓은 받침 (낮게)
+			if (BasePart)
+			{
+				AddPart(*this, *PillarMesh, EROHBasicShape::Cylinder,
+					FVector(0.f, 0.f, 115.f), FRotator::ZeroRotator, FVector(42.f, 42.f, 190.f),
+					FLinearColor(0.45f, 0.48f, 0.55f)); // 좁은 기둥
+				bCrystalVisualActive = IsActivated();
+				CrystalMesh = AddPart(*this, *PillarMesh, EROHBasicShape::Cube,
+					FVector(0.f, 0.f, 250.f), FRotator(45.f, 45.f, 0.f), FVector(55.f, 55.f, 55.f),
+					WaypointCrystalColor(bCrystalVisualActive)); // 45° 기울인 크리스탈 (옵션 — 틱이 null 가드)
+				if (CrystalMesh)
+				{
+					CrystalMid = Cast<UMaterialInstanceDynamic>(CrystalMesh->GetMaterial(0)); // 활성 전환 재채색용
+				}
+				return; // 조형 성공 — 단일 기둥 메시는 만들지 않는다 (링 디버그는 틱이 계속 담당)
+			}
+			// 받침조차 실패 = BasicShapes 미가용 — 아래 그레이박스 안전망으로
+		}
+
 		if (!Mesh)
 		{
 			Mesh = LoadWaypointPillarMesh();
@@ -107,10 +143,22 @@ void AROHWaypoint::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// 그레이박스: 활성 = 파란 링, 미활성 = 회색 링
-	const FColor RingColor = IsActivated() ? FColor(60, 140, 255) : FColor(110, 110, 110);
+	// 그레이박스: 활성 = 파란 링, 미활성 = 회색 링 (프로시저럴 조형과 무관하게 유지)
+	const bool bActivatedNow = IsActivated();
+	const FColor RingColor = bActivatedNow ? FColor(60, 140, 255) : FColor(110, 110, 110);
 	DrawDebugCircle(GetWorld(), GetActorLocation() + FVector(0.f, 0.f, 20.f), 200.f,
 		32, RingColor, false, -1.f, 0, 4.f, FVector(1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), false);
+
+	// 크리스탈 연출 (b33): 천천히 회전 + 활성 전환 시 재채색 (허용된 유일한 회전 연출)
+	if (CrystalMesh)
+	{
+		CrystalMesh->AddLocalRotation(FRotator(0.f, 40.f * DeltaSeconds, 0.f));
+		if (CrystalMid && bActivatedNow != bCrystalVisualActive)
+		{
+			bCrystalVisualActive = bActivatedNow;
+			CrystalMid->SetVectorParameterValue(TEXT("Color"), WaypointCrystalColor(bCrystalVisualActive));
+		}
+	}
 }
 
 bool AROHWaypoint::IsActivated() const
