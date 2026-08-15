@@ -6,6 +6,17 @@
 
 class UInputMappingContext;
 class UInputAction;
+class UROHUiWindow;
+
+/** UI 창 종류 (동시에 1개만 — ToggleUiWindow) */
+UENUM()
+enum class EROHUiWindowKind : uint8
+{
+	None,
+	Waypoint,
+	Inventory,
+	SkillTree
+};
 
 /**
  * 클릭 이동 컨트롤러 (디아블로식).
@@ -21,6 +32,13 @@ class ROH_API AROHPlayerController : public APlayerController
 public:
 	AROHPlayerController();
 
+	/**
+	 * UI 창 토글 (UI 1차): 같은 종류면 닫기, 다른 창이 열려 있으면 교체.
+	 * ESC는 PIE 종료와 충돌하므로 사용하지 않음 — 같은 키 재입력 또는 [닫기] 버튼.
+	 */
+	void ToggleUiWindow(EROHUiWindowKind Kind);
+	void CloseUiWindow();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -35,6 +53,8 @@ protected:
 	void OnSkill3();
 	void OnSkill4();
 	void OnInteract();
+	void OnToggleInventory();
+	void OnToggleSkillTree();
 	void ActivateSlot(int32 SlotIndex);
 
 	/**
@@ -68,9 +88,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> Skill4Action;
 
-	/** 상호작용: 주변 드랍 습득 → 없으면 장비 장착 (권장: E) */
+	/** 상호작용: 웨이포인트 창 → 주변 드랍 습득 → 장비 장착 (권장: E) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> InteractAction;
+
+	/** UI 창 토글 (I 인벤토리 / K 스킬트리) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> InventoryAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> SkillTreeAction;
 
 	/** 이 시간(초) 이하로 누르면 클릭 이동, 넘으면 홀드 이동으로 판정 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
@@ -80,4 +107,10 @@ private:
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
 	bool bRuntimeInputBuilt = false;
+
+	/** 현재 열린 UI 창 (GC 보호). 동시에 1개만 */
+	UPROPERTY()
+	TObjectPtr<UROHUiWindow> CurrentWindow;
+
+	EROHUiWindowKind CurrentWindowKind = EROHUiWindowKind::None;
 };

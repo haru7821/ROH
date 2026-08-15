@@ -320,9 +320,27 @@ void UROHInventoryComponent::RefreshSetBonuses()
 
 bool UROHInventoryComponent::UseFirstPotion()
 {
+	const UROHItemDatabase* Database = GetDatabase();
+	if (!Database)
+	{
+		return false;
+	}
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
+		if (Base && Base->Kind == EROHItemKind::Potion && Base->PotionHealAmount > 0.f)
+		{
+			return UsePotionAt(i);
+		}
+	}
+	return false;
+}
+
+bool UROHInventoryComponent::UsePotionAt(int32 ItemIndex)
+{
 	UROHItemDatabase* Database = GetDatabase();
 	UAbilitySystemComponent* ASC = GetOwnerASC();
-	if (!Database || !ASC)
+	if (!Database || !ASC || !Items.IsValidIndex(ItemIndex))
 	{
 		return false;
 	}
@@ -336,17 +354,14 @@ bool UROHInventoryComponent::UseFirstPotion()
 		}
 	}
 
-	for (int32 i = 0; i < Items.Num(); ++i)
+	const FROHItemBaseDef* Base = Database->FindBase(Items[ItemIndex].BaseId);
+	if (!Base || Base->Kind != EROHItemKind::Potion || Base->PotionHealAmount <= 0.f)
 	{
-		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
-		if (Base && Base->Kind == EROHItemKind::Potion && Base->PotionHealAmount > 0.f)
-		{
-			ASC->ApplyModToAttribute(UROHAttributeSet::GetHealthAttribute(), EGameplayModOp::Additive, Base->PotionHealAmount);
-			Items.RemoveAt(i);
-			return true;
-		}
+		return false;
 	}
-	return false;
+	ASC->ApplyModToAttribute(UROHAttributeSet::GetHealthAttribute(), EGameplayModOp::Additive, Base->PotionHealAmount);
+	Items.RemoveAt(ItemIndex);
+	return true;
 }
 
 bool UROHInventoryComponent::SocketRune(int32 ItemIndex, int32 RuneItemIndex, FString& OutError)

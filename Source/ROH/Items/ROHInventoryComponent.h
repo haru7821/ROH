@@ -37,8 +37,11 @@ public:
 
 	bool UnequipSlot(EROHEquipSlot Slot);
 
-	/** 첫 번째 물약 사용 (즉시 회복). M4에서 벨트 슬롯으로 확장 */
+	/** 첫 번째 물약 사용 (즉시 회복) — UsePotionAt 위임 */
 	bool UseFirstPotion();
+
+	/** 지정 인덱스의 물약 사용 (인벤토리 창 클릭용) */
+	bool UsePotionAt(int32 ItemIndex);
 
 	/**
 	 * 룬 소켓 (M5): 인벤토리의 룬을 인벤토리의 장비 빈 소켓에 삽입, 완성 시 룬워드 승격.

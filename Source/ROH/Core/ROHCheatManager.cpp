@@ -683,22 +683,8 @@ void UROHCheatManager::ROHWarp(int32 ZoneIndex)
 		return;
 	}
 
-	if (!Campaign->IsWaypointActivated(ZoneIndex))
-	{
-		CheatPrint(FString::Printf(TEXT("%s: 미활성화 — 직접 걸어가 발견하세요"),
-			*ZoneManager->GetZoneName(ZoneIndex).ToString()));
-		return;
-	}
-
-	const FVector Destination = ZoneManager->GetWaypointLocation(ZoneIndex) + FVector(0.f, 0.f, 100.f);
-	if (Player->TeleportTo(Destination, Player->GetActorRotation()))
-	{
-		CheatPrint(FString::Printf(TEXT("이동: %s"), *ZoneManager->GetZoneName(ZoneIndex).ToString()));
-	}
-	else
-	{
-		CheatPrint(TEXT("이동 실패 (목적지가 막혀 있음)"));
-	}
+	// 이동 로직은 플레이어에 일원화 (웨이포인트 창과 공용) — 결과/사유는 화면 메시지로 표시됨
+	Player->TravelToZone(ZoneIndex);
 }
 
 void UROHCheatManager::ROHGiveRune(FString TierOrName, int32 Count)

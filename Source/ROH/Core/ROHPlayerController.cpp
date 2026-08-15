@@ -1,6 +1,11 @@
 #include "Core/ROHPlayerController.h"
 #include "Core/ROHCheatManager.h"
 #include "Character/ROHPlayerCharacter.h"
+#include "UI/ROHUiWindow.h"
+#include "UI/ROHWaypointWindow.h"
+#include "UI/ROHInventoryWindow.h"
+#include "UI/ROHSkillTreeWindow.h"
+#include "Blueprint/UserWidget.h" // CreateWidget
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
@@ -68,9 +73,11 @@ void AROHPlayerController::BuildRuntimeInput()
 	Skill3Action = MakeAction(TEXT("IA_Skill3_Runtime"), EKeys::Three);
 	Skill4Action = MakeAction(TEXT("IA_Skill4_Runtime"), EKeys::Four);
 	InteractAction = MakeAction(TEXT("IA_Interact_Runtime"), EKeys::E);
+	InventoryAction = MakeAction(TEXT("IA_Inventory_Runtime"), EKeys::I);
+	SkillTreeAction = MakeAction(TEXT("IA_SkillTree_Runtime"), EKeys::K);
 	DefaultMappingContext = RuntimeIMC;
 
-	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3·4 스킬 / E 상호작용)"));
+	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3·4 스킬 / E 상호작용 / I 인벤토리 / K 스킬트리)"));
 }
 
 void AROHPlayerController::SetupInputComponent()
@@ -112,7 +119,66 @@ void AROHPlayerController::SetupInputComponent()
 		{
 			EIC->BindAction(InteractAction, ETriggerEvent::Started, this, &AROHPlayerController::OnInteract);
 		}
+		if (InventoryAction)
+		{
+			EIC->BindAction(InventoryAction, ETriggerEvent::Started, this, &AROHPlayerController::OnToggleInventory);
+		}
+		if (SkillTreeAction)
+		{
+			EIC->BindAction(SkillTreeAction, ETriggerEvent::Started, this, &AROHPlayerController::OnToggleSkillTree);
+		}
 	}
+}
+
+void AROHPlayerController::ToggleUiWindow(EROHUiWindowKind Kind)
+{
+	// 같은 창 재입력 = 닫기, 다른 창이 열려 있으면 교체
+	if (CurrentWindow && CurrentWindowKind == Kind)
+	{
+		CloseUiWindow();
+		return;
+	}
+	CloseUiWindow();
+
+	TSubclassOf<UROHUiWindow> WindowClass;
+	switch (Kind)
+	{
+	case EROHUiWindowKind::Waypoint:  WindowClass = UROHWaypointWindow::StaticClass(); break;
+	case EROHUiWindowKind::Inventory: WindowClass = UROHInventoryWindow::StaticClass(); break;
+	case EROHUiWindowKind::SkillTree: WindowClass = UROHSkillTreeWindow::StaticClass(); break;
+	default: break;
+	}
+	if (!WindowClass)
+	{
+		return;
+	}
+
+	CurrentWindow = CreateWidget<UROHUiWindow>(this, WindowClass);
+	if (CurrentWindow)
+	{
+		CurrentWindow->AddToViewport(10); // 디버그 메시지 위
+		CurrentWindowKind = Kind;
+	}
+}
+
+void AROHPlayerController::CloseUiWindow()
+{
+	if (CurrentWindow)
+	{
+		CurrentWindow->RemoveFromParent();
+		CurrentWindow = nullptr;
+	}
+	CurrentWindowKind = EROHUiWindowKind::None;
+}
+
+void AROHPlayerController::OnToggleInventory()
+{
+	ToggleUiWindow(EROHUiWindowKind::Inventory);
+}
+
+void AROHPlayerController::OnToggleSkillTree()
+{
+	ToggleUiWindow(EROHUiWindowKind::SkillTree);
 }
 
 void AROHPlayerController::OnInteract()

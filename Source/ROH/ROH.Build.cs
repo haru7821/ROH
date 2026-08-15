@@ -22,7 +22,9 @@ public class ROH : ModuleRules
 			"AIModule",
 			"NavigationSystem",
 			"Niagara",
-			"UMG"
+			"UMG",
+			"Slate",
+			"SlateCore"
 		});
 	}
 }

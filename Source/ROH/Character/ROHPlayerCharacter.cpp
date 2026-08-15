@@ -9,6 +9,7 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Core/ROHGameMode.h"
+#include "Core/ROHPlayerController.h" // ToggleUiWindow(EROHUiWindowKind) — 웨이포인트 창
 #include "Campaign/ROHCampaignSubsystem.h"
 #include "World/ROHWaypoint.h"
 #include "World/ROHZoneManager.h"
@@ -272,25 +273,7 @@ void AROHPlayerCharacter::Interact()
 		}
 	};
 
-	// 0) 근처 웨이포인트로 순환 이동 (docs/04 M4 지역)
-	const AROHWaypoint* NearWaypoint = nullptr;
-	float BestWaypointDistSq = FMath::Square(300.f);
-	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
-	{
-		const float WaypointDistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
-		if (WaypointDistSq < BestWaypointDistSq)
-		{
-			BestWaypointDistSq = WaypointDistSq;
-			NearWaypoint = *It;
-		}
-	}
-	// 이동할 곳이 없으면 아래 습득/장착 분기로 계속 (웨이포인트 근처 드랍 습득 차단 방지)
-	if (NearWaypoint && TravelViaWaypoint(NearWaypoint))
-	{
-		return;
-	}
-
-	// 1) 근처 지면 드랍 습득 (인벤토리 가득 등으로 바닥에 남은 것)
+	// 1) 근처 지면 드랍 습득 — 웨이포인트 창보다 우선 (기둥 근처 드랍이 못 줍게 되는 것 방지)
 	AROHItemPickup* Nearest = nullptr;
 	float BestDistSq = FMath::Square(250.f);
 	for (TActorIterator<AROHItemPickup> It(GetWorld()); It; ++It)
@@ -308,7 +291,28 @@ void AROHPlayerCharacter::Interact()
 		return;
 	}
 
-	// 2) 인벤토리의 첫 장비 장착
+	// 2) 근처 웨이포인트 = 지역 선택 창 (UI 1차 — 사용자 결정: E 순환 이동 대체)
+	const AROHWaypoint* NearWaypoint = nullptr;
+	float BestWaypointDistSq = FMath::Square(300.f);
+	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
+	{
+		const float WaypointDistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
+		if (WaypointDistSq < BestWaypointDistSq)
+		{
+			BestWaypointDistSq = WaypointDistSq;
+			NearWaypoint = *It;
+		}
+	}
+	if (NearWaypoint)
+	{
+		if (AROHPlayerController* PC = Cast<AROHPlayerController>(GetController()))
+		{
+			PC->ToggleUiWindow(EROHUiWindowKind::Waypoint);
+			return;
+		}
+	}
+
+	// 3) 인벤토리의 첫 장비 장착
 	if (Inventory && Inventory->EquipFirstEquippable())
 	{
 		ShowMessage(TEXT("장비 장착 완료 (콘솔 ROHDumpAttrs로 스탯 확인)"));
@@ -318,8 +322,9 @@ void AROHPlayerCharacter::Interact()
 	ShowMessage(TEXT("상호작용 대상 없음 (장착할 장비/주울 아이템 없음)"));
 }
 
-bool AROHPlayerCharacter::TravelViaWaypoint(const AROHWaypoint* FromWaypoint)
+bool AROHPlayerCharacter::TravelToZone(int32 TargetZoneIndex)
 {
+	// 웨이포인트 창/ROHWarp 공용 이동 (기존 E 순환 로직 대체 — 지역 선택형 UI)
 	auto ShowMessage = [](const FString& Text)
 	{
 		if (GEngine)
@@ -327,51 +332,29 @@ bool AROHPlayerCharacter::TravelViaWaypoint(const AROHWaypoint* FromWaypoint)
 			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Cyan, Text);
 		}
 	};
-	if (!FromWaypoint)
+
+	AROHZoneManager* ZoneManager = GetZoneManager();
+	const UROHCampaignSubsystem* Campaign = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>() : nullptr;
+	if (!ZoneManager || !Campaign || TargetZoneIndex < 0 || TargetZoneIndex >= ZoneManager->GetZoneCount())
 	{
 		return false;
 	}
 
-	// 지역 순서 오름차순으로 활성화된 웨이포인트를 모은다 (현재 지역 제외)
-	const int32 CurrentZone = FromWaypoint->GetZoneIndex();
-	TArray<const AROHWaypoint*> Candidates;
-	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
+	const FString ZoneName = ZoneManager->GetZoneName(TargetZoneIndex).ToString();
+	if (!Campaign->IsWaypointActivated(TargetZoneIndex))
 	{
-		if (It->GetZoneIndex() != CurrentZone && It->IsActivated())
-		{
-			Candidates.Add(*It);
-		}
-	}
-	if (Candidates.Num() == 0)
-	{
-		// 이동 불가 — 호출자가 습득/장착 분기로 계속하도록 false 반환
+		ShowMessage(FString::Printf(TEXT("%s: 미발견 — 직접 걸어가 웨이포인트를 발견하세요"), *ZoneName));
 		return false;
 	}
-	Candidates.Sort([](const AROHWaypoint& A, const AROHWaypoint& B)
-	{
-		return A.GetZoneIndex() < B.GetZoneIndex();
-	});
 
-	// 순환: 현재 지역보다 큰 첫 번째, 없으면 가장 앞(랩어라운드)
-	const AROHWaypoint* Target = Candidates[0];
-	for (const AROHWaypoint* Candidate : Candidates)
+	if (TeleportTo(ZoneManager->GetWaypointLocation(TargetZoneIndex) + FVector(0.f, 0.f, 100.f), GetActorRotation()))
 	{
-		if (Candidate->GetZoneIndex() > CurrentZone)
-		{
-			Target = Candidate;
-			break;
-		}
+		ShowMessage(FString::Printf(TEXT("이동: %s"), *ZoneName));
+		return true;
 	}
-
-	if (TeleportTo(Target->GetActorLocation() + FVector(0.f, 0.f, 100.f), GetActorRotation()))
-	{
-		ShowMessage(FString::Printf(TEXT("이동: %s"), *Target->GetZoneName().ToString()));
-	}
-	else
-	{
-		ShowMessage(TEXT("이동 실패 (목적지가 막혀 있음)"));
-	}
-	return true;
+	ShowMessage(TEXT("이동 실패 (목적지가 막혀 있음)"));
+	return false;
 }
 
 void AROHPlayerCharacter::HandleDeath(AActor* Killer)
