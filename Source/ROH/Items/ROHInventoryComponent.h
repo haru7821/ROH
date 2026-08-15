@@ -58,6 +58,15 @@ public:
 	/** 고대 합성에 필요한 성유물 조각 수 */
 	static constexpr int32 AncientForgeCost = 5;
 
+	/**
+	 * 도박 (M5 3차): 운명의 보석 3개 → 무기 뽑기.
+	 * 50% 레어 / 30% 유니크 / 15% 세트 / 5% [고대] 유니크 (잭팟 — bOutAncientJackpot).
+	 */
+	bool GambleWithGems(FString& OutMessage, bool& bOutAncientJackpot);
+
+	/** 도박 1회 비용 (운명의 보석) */
+	static constexpr int32 GambleGemCost = 3;
+
 	void AddGold(int32 Amount);
 	bool SpendGold(int32 Amount);
 	int32 GetGold() const { return Gold; }

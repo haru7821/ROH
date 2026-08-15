@@ -194,6 +194,32 @@ void AROHMonsterCharacter::DropLoot(AActor* Killer)
 		Drops.Gold += RollResult.Gold;
 	}
 
+	// 도박 보석 (M5 3차): TC와 별개의 난이도 게이트 굴림 — 노말 0 / 악몽 3% / 지옥 6%, 보스 2배.
+	// 소비성 드랍이라 비시드 FRand (SalvageUnique 조각 굴림과 동일 근거).
+	// Drops.Items에 합쳐 기존 산개 스폰 경로를 그대로 태운다.
+	if (const UROHCampaignSubsystem* Campaign = GameInstance->GetSubsystem<UROHCampaignSubsystem>())
+	{
+		float GemChance = 0.f;
+		switch (Campaign->GetDifficulty())
+		{
+		case EROHDifficulty::Nightmare: GemChance = 0.03f; break;
+		case EROHDifficulty::Hell:      GemChance = 0.06f; break;
+		default: break;
+		}
+		if (IsA<AROHBossCharacter>())
+		{
+			GemChance *= 2.f;
+		}
+		if (GemChance > 0.f && FMath::FRand() < GemChance)
+		{
+			const FROHItemInstance Gem = Database->GenerateItem(TEXT("FateGem"), ItemLevel, EROHItemQuality::Normal);
+			if (Gem.IsValid())
+			{
+				Drops.Items.Add(Gem);
+			}
+		}
+	}
+
 	int32 SpawnIndex = 0;
 	auto NextDropLocation = [this, &SpawnIndex]()
 	{

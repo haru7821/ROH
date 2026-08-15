@@ -145,4 +145,14 @@ public:
 	/** 세트 4종 목록 출력 (피스 구성/보너스 임계) */
 	UFUNCTION(Exec)
 	void ROHSets();
+
+	// --- M5 3차 도박 ---
+
+	/** 도박: 운명의 보석 3개 → 무기 뽑기 (50% 레어/30% 유니크/15% 세트/5% 고대 잭팟) */
+	UFUNCTION(Exec)
+	void ROHGamble();
+
+	/** 운명의 보석 지급 (테스트용). 예: ROHGiveGem 9 */
+	UFUNCTION(Exec)
+	void ROHGiveGem(int32 Count = 3);
 };

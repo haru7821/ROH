@@ -22,6 +22,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
+#include "DrawDebugHelpers.h"
+#include "TimerManager.h"
 #include "ROH.h"
 
 AROHPlayerCharacter::AROHPlayerCharacter()
@@ -355,6 +357,53 @@ bool AROHPlayerCharacter::TravelToZone(int32 TargetZoneIndex)
 	}
 	ShowMessage(TEXT("이동 실패 (목적지가 막혀 있음)"));
 	return false;
+}
+
+void AROHPlayerCharacter::PlayAncientCelebration(const FString& ItemName)
+{
+	// 그레이박스 당첨 연출 — 최종안은 M6에서 나이아가라/사운드/카메라셰이크로 교체 (애셋 금지 단계)
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor(220, 60, 60),
+			FString::Printf(TEXT("★★★ 고대무기 강림: %s ★★★"), *ItemName));
+		GEngine->AddOnScreenDebugMessage(-1, 8.f, FColor(255, 200, 60),
+			TEXT("영웅이 사용하던 고대의 힘이 깃들었다"));
+	}
+
+	// 월드 연출: 2.4초간 0.2초 간격 12틱 — 확장 링 2겹(진홍/금 교차) + 상승 나선 점.
+	// Blizzard와 동일한 자체 정리 타이머 패턴 (TSharedRef 카운터/핸들 + CreateWeakLambda)
+	TSharedRef<int32> TicksLeft = MakeShared<int32>(12);
+	TSharedRef<FTimerHandle> TimerRef = MakeShared<FTimerHandle>();
+	GetWorldTimerManager().SetTimer(*TimerRef,
+		FTimerDelegate::CreateWeakLambda(this, [this, TicksLeft, TimerRef]()
+		{
+			const int32 TickIndex = 12 - *TicksLeft; // 0..11
+			const FVector Center = GetActorLocation()
+				- FVector(0.f, 0.f, GetCapsuleComponent()->GetScaledCapsuleHalfHeight() - 10.f);
+
+			// 확장 링 2겹 — 틱마다 진홍/금 교차
+			const float RingRadius = 80.f + TickIndex * 60.f;
+			const FColor OuterColor = (TickIndex % 2 == 0) ? FColor(220, 60, 60) : FColor(255, 200, 60);
+			const FColor InnerColor = (TickIndex % 2 == 0) ? FColor(255, 200, 60) : FColor(220, 60, 60);
+			DrawDebugCircle(GetWorld(), Center, RingRadius, 32, OuterColor, false, 0.25f, 0, 6.f,
+				FVector(1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), false);
+			DrawDebugCircle(GetWorld(), Center, RingRadius * 0.6f, 32, InnerColor, false, 0.25f, 0, 6.f,
+				FVector(1.f, 0.f, 0.f), FVector(0.f, 1.f, 0.f), false);
+
+			// 상승 나선 점 8개 (황금각 회전, 틱당 25uu 상승)
+			for (int32 PointIndex = 0; PointIndex < 8; ++PointIndex)
+			{
+				const float SpiralAngle = FMath::DegreesToRadians(TickIndex * 137.5f + PointIndex * 45.f);
+				const FVector SpiralPoint = Center + FVector(
+					FMath::Cos(SpiralAngle) * 120.f, FMath::Sin(SpiralAngle) * 120.f, TickIndex * 25.f);
+				DrawDebugPoint(GetWorld(), SpiralPoint, 12.f, FColor(255, 200, 60), false, 0.3f);
+			}
+
+			if (--(*TicksLeft) <= 0)
+			{
+				GetWorldTimerManager().ClearTimer(*TimerRef);
+			}
+		}), 0.2f, true);
 }
 
 void AROHPlayerCharacter::HandleDeath(AActor* Killer)

@@ -51,6 +51,9 @@ public:
 	/** 지역 매니저 조회 (매 틱 월드 순회 방지 — 캐시 무효 시 재탐색). UI 창에서도 사용 */
 	AROHZoneManager* GetZoneManager();
 
+	/** 고대무기 당첨 연출 (M5 3차, 그레이박스 — 최종안은 M6 나이아가라/사운드로 교체) */
+	void PlayAncientCelebration(const FString& ItemName);
+
 	/** 리스폰: 위치 이동 + 상태/자원 복구 */
 	void Revive(const FVector& Location);
 

@@ -929,3 +929,50 @@ void UROHCheatManager::ROHSets()
 		}
 	}
 }
+
+void UROHCheatManager::ROHGamble()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
+	if (!Player || !Inventory)
+	{
+		return;
+	}
+
+	FString Message;
+	bool bJackpot = false;
+	Inventory->GambleWithGems(Message, bJackpot);
+	CheatPrint(Message);
+
+	if (bJackpot && Inventory->GetItems().Num() > 0)
+	{
+		// 결과는 방금 AddItem으로 마지막에 추가됨 — 이름을 뽑아 연출 호출
+		const UROHItemDatabase* Database = GetDatabase(this);
+		const FString ItemName = Database
+			? Database->GetItemDisplayName(Inventory->GetItems().Last()).ToString() : FString();
+		Player->PlayAncientCelebration(ItemName);
+	}
+}
+
+void UROHCheatManager::ROHGiveGem(int32 Count)
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
+	if (!Database || !Inventory)
+	{
+		return;
+	}
+
+	Count = FMath::Clamp(Count, 1, 40);
+	int32 Given = 0;
+	for (int32 i = 0; i < Count; ++i)
+	{
+		if (Inventory->AddItem(Database->GenerateItem(TEXT("FateGem"), 1, EROHItemQuality::Normal)))
+		{
+			++Given;
+		}
+	}
+	CheatPrint(FString::Printf(TEXT("획득: 운명의 보석 ×%d (도박: ROHGamble — %d개 소모)"),
+		Given, UROHInventoryComponent::GambleGemCost));
+}

@@ -512,6 +512,98 @@ bool UROHInventoryComponent::ForgeAncient(int32 ItemIndex, FString& OutMessage)
 	return true;
 }
 
+bool UROHInventoryComponent::GambleWithGems(FString& OutMessage, bool& bOutAncientJackpot)
+{
+	bOutAncientJackpot = false;
+	UROHItemDatabase* Database = GetDatabase();
+	if (!Database)
+	{
+		OutMessage = TEXT("아이템 데이터베이스가 없습니다.");
+		return false;
+	}
+
+	// 보석 수집 — 소모 전 검증 (실패 경로에서 아이템 소실 금지, SalvageUnique와 동일 원칙)
+	TArray<int32> GemIndices;
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		if (Items[i].BaseId == TEXT("FateGem"))
+		{
+			GemIndices.Add(i);
+		}
+	}
+	if (GemIndices.Num() < GambleGemCost)
+	{
+		OutMessage = FString::Printf(TEXT("운명의 보석이 부족합니다 (%d/%d — 악몽/지옥 몬스터가 떨어뜨립니다)"),
+			GemIndices.Num(), GambleGemCost);
+		return false;
+	}
+	// 공간: 보석 3개를 빼고 1개를 넣으므로 항상 여유 — 별도 용량 검증 불필요
+
+	// 결과 굴림 (비시드 — 소비성): 5% 고대 잭팟 / 30% 유니크 / 15% 세트 / 50% 레어
+	const FName WeaponBase = FMath::RandBool() ? FName(TEXT("ShortSword")) : FName(TEXT("BattleAxe"));
+	const int32 GambleIlvl = 12; // 상급 유니크(성 라콤/아벨로 등) 후보 포함
+	const float ResultRoll = FMath::FRand();
+	const bool bJackpotRoll = ResultRoll < 0.05f;
+
+	FROHItemInstance Result;
+	if (bJackpotRoll)
+	{
+		// 잭팟: 영웅(성인)이 사용하던 고대무기 — 유니크 무기 생성 후 Ancient 승격 (ForgeAncient와 동일 의미)
+		Result = Database->GenerateItem(WeaponBase, GambleIlvl, EROHItemQuality::Unique);
+		if (Result.UniqueId.IsNone())
+		{
+			// 방어: 후보 부재로 레어 강등된 경우 1회 재시도 (현 DB엔 무기 유니크가 항상 있어 실제 미발생)
+			Result = Database->GenerateItem(WeaponBase, GambleIlvl, EROHItemQuality::Unique);
+		}
+		if (!Result.UniqueId.IsNone())
+		{
+			Result.Quality = EROHItemQuality::Ancient;
+			bOutAncientJackpot = true;
+		}
+	}
+	else if (ResultRoll < 0.35f)
+	{
+		Result = Database->GenerateItem(WeaponBase, GambleIlvl, EROHItemQuality::Unique);
+	}
+	else if (ResultRoll < 0.50f)
+	{
+		// 세트 피스 (무기 우선 — 현 DB엔 ilvl 12 무기 피스가 항상 있어 강등 미발생, 규칙은 자연 적용)
+		Result = Database->GenerateItem(WeaponBase, GambleIlvl, EROHItemQuality::Set);
+	}
+	else
+	{
+		Result = Database->GenerateItem(WeaponBase, GambleIlvl, EROHItemQuality::Rare);
+	}
+	if (!Result.IsValid())
+	{
+		OutMessage = TEXT("도박 실패: 아이템 생성 오류 (보석은 소모되지 않음)");
+		return false;
+	}
+
+	// 성공 확정 후 소모 — 뒤 인덱스부터
+	for (int32 Consumed = 0; Consumed < GambleGemCost; ++Consumed)
+	{
+		Items.RemoveAt(GemIndices[GemIndices.Num() - 1 - Consumed]);
+	}
+	AddItem(Result); // 3개 빠진 자리라 항상 성공
+
+	const FString ResultName = Database->GetItemDisplayName(Result).ToString();
+	if (bOutAncientJackpot)
+	{
+		OutMessage = FString::Printf(TEXT("★ 고대무기 강림: %s ★"), *ResultName);
+	}
+	else if (bJackpotRoll)
+	{
+		OutMessage = FString::Printf(TEXT("도박 결과: %s (고대 강림 실패 — 레어로 대체)"), *ResultName);
+	}
+	else
+	{
+		OutMessage = FString::Printf(TEXT("도박 결과: %s"), *ResultName);
+	}
+	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
+	return true;
+}
+
 void UROHInventoryComponent::ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const
 {
 	OutItems = Items;

@@ -60,6 +60,7 @@ void UROHItemDatabase::BuildDefaultData()
 	AddBase("LeatherBoots", TEXT("가죽장화"), EROHItemKind::Equipment, EROHEquipSlot::Boots,  0.f, 0.f, 5.f, 1, 0.f, 20);
 	AddBase("HealthPotion", TEXT("치유물약"), EROHItemKind::Potion,    EROHEquipSlot::None,   0.f, 0.f, 0.f, 1, 60.f, 50);
 	AddBase("SaintRelic",   TEXT("성유물 조각"), EROHItemKind::Material, EROHEquipSlot::None, 0.f, 0.f, 0.f, 1, 0.f, 100); // 유니크 분해 재료 (M5 2차)
+	AddBase("FateGem",      TEXT("운명의 보석"), EROHItemKind::Material, EROHEquipSlot::None, 0.f, 0.f, 0.f, 1, 0.f, 500); // 도박 재화 (M5 3차 — 고난이도 전용 드랍)
 
 	// ---------- 룬 12종 (M5 — docs/06 아자크론의 33 룬 봉인 중 발굴된 12종) ----------
 	// 소켓 보너스(단일 어트리뷰트) + 룬 위력(티어×0.5%, 최종 피해 곱연산 합산원 — docs/10 §5.2)
