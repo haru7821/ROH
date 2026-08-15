@@ -20,6 +20,13 @@ class ROH_API AROHMonsterSpawner : public AActor
 public:
 	AROHMonsterSpawner();
 
+	/**
+	 * 지역 매니저용 설정 주입 (docs/04 M4 지역).
+	 * 초기 스폰은 BeginPlay의 0.5초 지연 타이머로 시작되므로 SpawnActor 직후 호출이 안전하다
+	 * — 이 가정이 깨지면(즉시 스폰으로 바뀌면) SpawnActorDeferred로 전환할 것.
+	 */
+	void ConfigureSpawner(const TArray<TSubclassOf<AROHMonsterCharacter>>& InClasses, int32 InMaxAlive, int32 InMonsterLevelBonus);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -35,6 +42,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "ROH|Spawner")
 	int32 MaxAlive = 8;
+
+	/** 스폰 몬스터 레벨 가산 (깊은 지역: 명중 공식 레벨 + 드랍 ilvl 상승) */
+	UPROPERTY(EditAnywhere, Category = "ROH|Spawner")
+	int32 MonsterLevelBonus = 0;
 
 	UPROPERTY(EditAnywhere, Category = "ROH|Spawner")
 	float SpawnRadius = 800.f;

@@ -68,4 +68,15 @@ public:
 
 	UPROPERTY()
 	int32 QuestKills = 0;
+
+	/** 퀘스트 단계 도달 전에 처치한 보스 기록 (자동 정산용) */
+	UPROPERTY()
+	bool bBaltarKilledEarly = false;
+
+	UPROPERTY()
+	bool bMorgathKilledEarly = false;
+
+	/** 활성화된 웨이포인트 지역 인덱스 (구버전 세이브엔 없음 → 빈 배열 = 마을만) */
+	UPROPERTY()
+	TArray<int32> ActivatedWaypoints;
 };

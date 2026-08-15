@@ -3,6 +3,7 @@
 #include "Character/ROHPlayerCharacter.h"
 #include "Character/ROHPlayerClasses.h"
 #include "World/ROHMonsterSpawner.h"
+#include "World/ROHZoneManager.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
@@ -64,7 +65,37 @@ void AROHGameMode::BeginPlay()
 		return;
 	}
 
-	// 맵에 스포너가 하나도 없으면 플레이어 스타트 근처에 자동 배치
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	// 1) 지역 매니저 우선: 존재하면(또는 자동 배치되면) 스포너/보스/웨이포인트 배치는 매니저가 담당
+	AROHZoneManager* ZoneManager = nullptr;
+	for (TActorIterator<AROHZoneManager> It(GetWorld()); It; ++It)
+	{
+		ZoneManager = *It;
+		break;
+	}
+	if (!ZoneManager)
+	{
+		// 마을(0번 지역)이 플레이어 스타트를 감싸도록 스타트 위치에 앵커
+		FVector AnchorLocation(0.f, 0.f, 100.f);
+		if (const AActor* Start = FindPlayerStart(nullptr))
+		{
+			AnchorLocation = Start->GetActorLocation();
+		}
+		ZoneManager = GetWorld()->SpawnActor<AROHZoneManager>(
+			AROHZoneManager::StaticClass(), AnchorLocation, FRotator::ZeroRotator, SpawnParams);
+		if (ZoneManager)
+		{
+			UE_LOG(LogROH, Log, TEXT("지역 매니저 자동 배치 (%s)"), *AnchorLocation.ToCompactString());
+		}
+	}
+	if (ZoneManager)
+	{
+		return;
+	}
+
+	// 2) 폴백: 지역 매니저 스폰 실패 시에만 기존 단독 스포너 자동 배치 유지
 	for (TActorIterator<AROHMonsterSpawner> It(GetWorld()); It; ++It)
 	{
 		return;
@@ -75,9 +106,6 @@ void AROHGameMode::BeginPlay()
 	{
 		SpawnLocation = Start->GetActorLocation() + FVector(1500.f, 0.f, 0.f);
 	}
-
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	GetWorld()->SpawnActor<AROHMonsterSpawner>(AROHMonsterSpawner::StaticClass(), SpawnLocation, FRotator::ZeroRotator, SpawnParams);
 	UE_LOG(LogROH, Log, TEXT("맵에 몬스터 스포너가 없어 자동 배치했습니다 (%s)"), *SpawnLocation.ToCompactString());
 }

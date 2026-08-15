@@ -1,5 +1,6 @@
 #include "World/ROHMonsterSpawner.h"
 #include "Character/ROHMonsterCharacter.h"
+#include "Character/ROHAttributeSet.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "NavigationSystem.h"
@@ -15,6 +16,16 @@ AROHMonsterSpawner::AROHMonsterSpawner()
 	MonsterClasses.Add(AROHMonster_Brute::StaticClass());
 	MonsterClasses.Add(AROHMonster_Hexer::StaticClass());
 	MonsterClasses.Add(AROHMonster_Stalker::StaticClass());
+}
+
+void AROHMonsterSpawner::ConfigureSpawner(const TArray<TSubclassOf<AROHMonsterCharacter>>& InClasses, int32 InMaxAlive, int32 InMonsterLevelBonus)
+{
+	if (InClasses.Num() > 0)
+	{
+		MonsterClasses = InClasses;
+	}
+	MaxAlive = FMath::Max(1, InMaxAlive);
+	MonsterLevelBonus = FMath::Max(0, InMonsterLevelBonus);
 }
 
 void AROHMonsterSpawner::BeginPlay()
@@ -68,6 +79,15 @@ void AROHMonsterSpawner::SpawnOne()
 	{
 		++AliveCount;
 		Monster->OnDeath.AddDynamic(this, &AROHMonsterSpawner::OnMonsterDeath);
+
+		// 지역 레벨 가산: 빙의(동기) 난이도 스케일링 이후 합성 — PromoteToRank와 동일 규칙
+		if (MonsterLevelBonus > 0)
+		{
+			if (UROHAttributeSet* Attributes = Monster->GetAttributeSet())
+			{
+				Attributes->SetCharacterLevel(Attributes->GetCharacterLevel() + MonsterLevelBonus);
+			}
+		}
 
 		// 정예 판정: 고유 3%, 정예 10% (docs/04 M4 챔피언/유니크 변형)
 		// SpawnActor 직후 = 빙의 난이도 스케일링 이후이므로 배율이 난이도와 합성된다

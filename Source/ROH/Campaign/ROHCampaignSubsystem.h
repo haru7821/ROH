@@ -56,13 +56,34 @@ public:
 	/** HUD 표시용 현재 목표 (난이도 접두 포함) */
 	FString GetObjectiveText() const;
 
+	// --- 웨이포인트 (docs/04 M4 지역). 활성화 상태의 소유자 — 액터(AROHWaypoint)는 질의만 ---
+	/** 신규 활성화면 true (이미 활성화 상태였으면 false) */
+	bool ActivateWaypoint(int32 ZoneIndex);
+	bool IsWaypointActivated(int32 ZoneIndex) const { return ActivatedWaypoints.Contains(ZoneIndex); }
+	/** 세이브용: 정렬된 사본 */
+	TArray<int32> GetActivatedWaypointsSorted() const;
+
 	// --- 세이브/로드 ---
 	void RestoreState(EROHDifficulty InDifficulty, int32 InQuestStage, int32 InKillCount);
+	void RestoreWaypoints(const TArray<int32>& InActivated);
+	void RestoreEarlyBossKills(bool bInBaltar, bool bInMorgath);
+	bool WasBaltarKilledEarly() const { return bBaltarKilledEarly; }
+	bool WasMorgathKilledEarly() const { return bMorgathKilledEarly; }
 
 private:
 	void GrantStageReward(AActor* Killer, int32 SkillPoints, int32 Gold, const FString& Message);
 
+	/** 선행 처치된 보스 단계를 현재 단계에서 즉시 정산 (소프트락 방지) */
+	void SettlePendingBossStages(AActor* Killer);
+
 	EROHDifficulty Difficulty = EROHDifficulty::Normal;
 	int32 QuestStage = 0;
 	int32 KillCount = 0;
+
+	/** 퀘스트 단계 도달 전에 처치된 보스 기록 (단계 도달 시 자동 정산) */
+	bool bBaltarKilledEarly = false;
+	bool bMorgathKilledEarly = false;
+
+	/** 활성화된 웨이포인트의 지역 인덱스 (마을 0은 지역 매니저가 시작 시 활성화) */
+	TSet<int32> ActivatedWaypoints;
 };

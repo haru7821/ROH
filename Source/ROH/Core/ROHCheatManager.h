@@ -105,4 +105,8 @@ public:
 
 	UFUNCTION(Exec)
 	void ROHLoad();
+
+	/** 활성화된 웨이포인트로 순간이동. 인자 없이 호출하면 지역 목록/활성 상태 출력. 예: ROHWarp 2 */
+	UFUNCTION(Exec)
+	void ROHWarp(int32 ZoneIndex = -1);
 };

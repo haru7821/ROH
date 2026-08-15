@@ -10,6 +10,8 @@ class UCameraComponent;
 class UROHInventoryComponent;
 class UROHProgressionComponent;
 class UROHSkillTreeComponent;
+class AROHWaypoint;
+class AROHZoneManager;
 
 /**
  * 쿼터뷰 플레이어 캐릭터.
@@ -37,7 +39,7 @@ public:
 
 	static constexpr int32 MaxSkillSlot = 4;
 
-	/** E 상호작용: 주변 드랍 습득 → 없으면 인벤토리 첫 장비 장착. NPC 대화 등으로 확장 예정 */
+	/** E 상호작용: 웨이포인트 이동 → 주변 드랍 습득 → 인벤토리 첫 장비 장착. NPC 대화 등으로 확장 예정 */
 	void Interact();
 
 	/** 리스폰: 위치 이동 + 상태/자원 복구 */
@@ -73,6 +75,14 @@ protected:
 	virtual void PossessedBy(AController* NewController) override;
 
 private:
+	/** 웨이포인트 순환 이동. 이동할 곳이 없으면 false (호출자는 습득/장착으로 계속) */
+	bool TravelViaWaypoint(const AROHWaypoint* FromWaypoint);
+
+	/** 지역 매니저 조회 (매 틱 월드 순회 방지 — 캐시 무효 시 재탐색) */
+	AROHZoneManager* GetZoneManager();
+
 	/** 난이도 저항 페널티 GE 핸들 (재적용 시 제거용) */
 	FActiveGameplayEffectHandle DifficultyPenaltyHandle;
+
+	TWeakObjectPtr<AROHZoneManager> CachedZoneManager;
 };

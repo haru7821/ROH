@@ -10,6 +10,8 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Save/ROHSaveSubsystem.h"
+#include "World/ROHZoneManager.h"
+#include "EngineUtils.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameFramework/PlayerController.h"
@@ -589,5 +591,54 @@ void UROHCheatManager::ROHLoad()
 	if (Player && SaveSystem)
 	{
 		CheatPrint(SaveSystem->LoadCharacter(Player) ? TEXT("로드 완료") : TEXT("로드 실패 (세이브 없음/버전 불일치)"));
+	}
+}
+
+void UROHCheatManager::ROHWarp(int32 ZoneIndex)
+{
+	APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	const UROHCampaignSubsystem* Campaign = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>() : nullptr;
+	AROHZoneManager* ZoneManager = nullptr;
+	for (TActorIterator<AROHZoneManager> It(GetWorld()); It; ++It)
+	{
+		ZoneManager = *It;
+		break;
+	}
+	if (!Player || !Campaign || !ZoneManager)
+	{
+		CheatPrint(TEXT("ROHWarp: 지역 매니저가 없습니다"));
+		return;
+	}
+
+	if (ZoneIndex < 0 || ZoneIndex >= ZoneManager->GetZoneCount())
+	{
+		// 목록 출력
+		for (int32 Index = 0; Index < ZoneManager->GetZoneCount(); ++Index)
+		{
+			CheatPrint(FString::Printf(TEXT("  %d: %s %s"), Index,
+				*ZoneManager->GetZoneName(Index).ToString(),
+				Campaign->IsWaypointActivated(Index) ? TEXT("[활성]") : TEXT("[미활성]")));
+		}
+		CheatPrint(TEXT("사용법: ROHWarp <지역 0~3> (활성화된 웨이포인트만)"));
+		return;
+	}
+
+	if (!Campaign->IsWaypointActivated(ZoneIndex))
+	{
+		CheatPrint(FString::Printf(TEXT("%s: 미활성화 — 직접 걸어가 발견하세요"),
+			*ZoneManager->GetZoneName(ZoneIndex).ToString()));
+		return;
+	}
+
+	const FVector Destination = ZoneManager->GetWaypointLocation(ZoneIndex) + FVector(0.f, 0.f, 100.f);
+	if (Player->TeleportTo(Destination, Player->GetActorRotation()))
+	{
+		CheatPrint(FString::Printf(TEXT("이동: %s"), *ZoneManager->GetZoneName(ZoneIndex).ToString()));
+	}
+	else
+	{
+		CheatPrint(TEXT("이동 실패 (목적지가 막혀 있음)"));
 	}
 }

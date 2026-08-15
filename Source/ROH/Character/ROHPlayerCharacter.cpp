@@ -10,6 +10,8 @@
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Core/ROHGameMode.h"
 #include "Campaign/ROHCampaignSubsystem.h"
+#include "World/ROHWaypoint.h"
+#include "World/ROHZoneManager.h"
 #include "GameplayEffect.h"
 #include "ROHGameplayTags.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -231,7 +233,33 @@ void AROHPlayerCharacter::Tick(float DeltaSeconds)
 		{
 			GEngine->AddOnScreenDebugMessage(8, 0.5f, FColor::Emerald, Campaign->GetObjectiveText());
 		}
+
+		// 현재 지역 표시 (네 번째 줄) — 지역 밖이면 표시하지 않음
+		if (AROHZoneManager* ZoneManager = GetZoneManager())
+		{
+			const int32 ZoneIndex = ZoneManager->GetZoneIndexAt(GetActorLocation());
+			if (ZoneIndex >= 0)
+			{
+				GEngine->AddOnScreenDebugMessage(9, 0.5f, FColor::Cyan,
+					FString::Printf(TEXT("지역: %s%s"),
+						*ZoneManager->GetZoneName(ZoneIndex).ToString(),
+						ZoneManager->IsTown(ZoneIndex) ? TEXT(" (안전 지대)") : TEXT("")));
+			}
+		}
 	}
+}
+
+AROHZoneManager* AROHPlayerCharacter::GetZoneManager()
+{
+	if (!CachedZoneManager.IsValid())
+	{
+		for (TActorIterator<AROHZoneManager> It(GetWorld()); It; ++It)
+		{
+			CachedZoneManager = *It;
+			break;
+		}
+	}
+	return CachedZoneManager.Get();
 }
 
 void AROHPlayerCharacter::Interact()
@@ -243,6 +271,24 @@ void AROHPlayerCharacter::Interact()
 			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Cyan, Text);
 		}
 	};
+
+	// 0) 근처 웨이포인트로 순환 이동 (docs/04 M4 지역)
+	const AROHWaypoint* NearWaypoint = nullptr;
+	float BestWaypointDistSq = FMath::Square(300.f);
+	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
+	{
+		const float WaypointDistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
+		if (WaypointDistSq < BestWaypointDistSq)
+		{
+			BestWaypointDistSq = WaypointDistSq;
+			NearWaypoint = *It;
+		}
+	}
+	// 이동할 곳이 없으면 아래 습득/장착 분기로 계속 (웨이포인트 근처 드랍 습득 차단 방지)
+	if (NearWaypoint && TravelViaWaypoint(NearWaypoint))
+	{
+		return;
+	}
 
 	// 1) 근처 지면 드랍 습득 (인벤토리 가득 등으로 바닥에 남은 것)
 	AROHItemPickup* Nearest = nullptr;
@@ -270,6 +316,62 @@ void AROHPlayerCharacter::Interact()
 	}
 
 	ShowMessage(TEXT("상호작용 대상 없음 (장착할 장비/주울 아이템 없음)"));
+}
+
+bool AROHPlayerCharacter::TravelViaWaypoint(const AROHWaypoint* FromWaypoint)
+{
+	auto ShowMessage = [](const FString& Text)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Cyan, Text);
+		}
+	};
+	if (!FromWaypoint)
+	{
+		return false;
+	}
+
+	// 지역 순서 오름차순으로 활성화된 웨이포인트를 모은다 (현재 지역 제외)
+	const int32 CurrentZone = FromWaypoint->GetZoneIndex();
+	TArray<const AROHWaypoint*> Candidates;
+	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
+	{
+		if (It->GetZoneIndex() != CurrentZone && It->IsActivated())
+		{
+			Candidates.Add(*It);
+		}
+	}
+	if (Candidates.Num() == 0)
+	{
+		// 이동 불가 — 호출자가 습득/장착 분기로 계속하도록 false 반환
+		return false;
+	}
+	Candidates.Sort([](const AROHWaypoint& A, const AROHWaypoint& B)
+	{
+		return A.GetZoneIndex() < B.GetZoneIndex();
+	});
+
+	// 순환: 현재 지역보다 큰 첫 번째, 없으면 가장 앞(랩어라운드)
+	const AROHWaypoint* Target = Candidates[0];
+	for (const AROHWaypoint* Candidate : Candidates)
+	{
+		if (Candidate->GetZoneIndex() > CurrentZone)
+		{
+			Target = Candidate;
+			break;
+		}
+	}
+
+	if (TeleportTo(Target->GetActorLocation() + FVector(0.f, 0.f, 100.f), GetActorRotation()))
+	{
+		ShowMessage(FString::Printf(TEXT("이동: %s"), *Target->GetZoneName().ToString()));
+	}
+	else
+	{
+		ShowMessage(TEXT("이동 실패 (목적지가 막혀 있음)"));
+	}
+	return true;
 }
 
 void AROHPlayerCharacter::HandleDeath(AActor* Killer)

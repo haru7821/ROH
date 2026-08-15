@@ -53,6 +53,9 @@ bool UROHSaveSubsystem::SaveCharacter(AROHPlayerCharacter* Player)
 		Save->Difficulty = static_cast<uint8>(Campaign->GetDifficulty());
 		Save->QuestStage = Campaign->GetQuestStage();
 		Save->QuestKills = Campaign->GetKillCount();
+		Save->ActivatedWaypoints = Campaign->GetActivatedWaypointsSorted();
+		Save->bBaltarKilledEarly = Campaign->WasBaltarKilledEarly();
+		Save->bMorgathKilledEarly = Campaign->WasMorgathKilledEarly();
 	}
 
 	const bool bSaved = UGameplayStatics::SaveGameToSlot(Save, SlotName, 0);
@@ -121,6 +124,8 @@ AROHPlayerCharacter* UROHSaveSubsystem::LoadCharacter(AROHPlayerCharacter* Curre
 		Campaign->RestoreState(
 			static_cast<EROHDifficulty>(FMath::Clamp<int32>(Save->Difficulty, 0, 2)),
 			Save->QuestStage, Save->QuestKills);
+		Campaign->RestoreWaypoints(Save->ActivatedWaypoints);
+		Campaign->RestoreEarlyBossKills(Save->bBaltarKilledEarly, Save->bMorgathKilledEarly);
 	}
 	const bool bWantElementalist = Save->PlayerClassName == TEXT("Elementalist");
 	const TSubclassOf<AROHPlayerCharacter> NewClass = bWantElementalist
