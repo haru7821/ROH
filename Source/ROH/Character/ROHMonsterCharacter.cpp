@@ -1,5 +1,6 @@
 #include "Character/ROHMonsterCharacter.h"
 #include "Abilities/Monster/ROHAbility_MonsterAttack.h"
+#include "Abilities/ROHAbilitySystemComponent.h" // TObjectPtr 멤버 호출에 완전한 타입 필요
 #include "AI/ROHMonsterAIController.h"
 #include "Character/ROHAttributeSet.h"
 #include "Items/ROHItemDatabase.h"
@@ -20,6 +21,17 @@ AROHMonsterCharacter::AROHMonsterCharacter()
 
 	BaseMaxHealth = 80.f;
 	BaseMoveSpeed = 400.f;
+}
+
+void AROHMonsterCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// AttackAbility는 DefaultAbilities 목록 밖에서 지정되므로 별도 부여 필요
+	if (AttackAbility && AbilitySystemComponent && !AbilitySystemComponent->FindAbilitySpecFromClass(AttackAbility))
+	{
+		GrantAbility(AttackAbility);
+	}
 }
 
 void AROHMonsterCharacter::HandleDeath(AActor* Killer)

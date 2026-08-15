@@ -5,6 +5,7 @@
 #include "Items/ROHItemTypes.h"
 #include "Character/ROHPlayerCharacter.h"
 #include "Character/ROHPlayerClasses.h"
+#include "Character/ROHBossCharacter.h"
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Save/ROHSaveSubsystem.h"
@@ -437,6 +438,28 @@ void UROHCheatManager::ROHSetClass(FString ClassName)
 	if (GameMode->RespawnPlayerAs(PC, NewClass))
 	{
 		CheatPrint(FString::Printf(TEXT("클래스 전환: %s (성장/인벤토리는 초기화 — 유지하려면 전환 전 ROHSave)"), *ClassName));
+	}
+}
+
+void UROHCheatManager::ROHSpawnBoss()
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	const APawn* PlayerPawn = PC ? PC->GetPawn() : nullptr;
+	if (!PlayerPawn || !GetWorld())
+	{
+		return;
+	}
+
+	const FVector SpawnLocation = PlayerPawn->GetActorLocation() + PlayerPawn->GetActorForwardVector() * 800.f + FVector(0.f, 0.f, 50.f);
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	if (GetWorld()->SpawnActor<AROHBossCharacter>(AROHBossCharacter::StaticClass(), SpawnLocation, FRotator::ZeroRotator, SpawnParams))
+	{
+		CheatPrint(TEXT("보스 발타르 소환 — 빨간 장판(내려찍기)은 밖으로 피하세요"));
+	}
+	else
+	{
+		CheatPrint(TEXT("보스 소환 실패 (공간 부족)"));
 	}
 }
 

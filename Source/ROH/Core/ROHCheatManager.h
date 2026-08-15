@@ -79,6 +79,12 @@ public:
 	UFUNCTION(Exec)
 	void ROHRespec();
 
+	// --- M4 캠페인 ---
+
+	/** 보스 발타르를 전방에 소환 (패턴 전투 테스트용) */
+	UFUNCTION(Exec)
+	void ROHSpawnBoss();
+
 	/** 클래스 전환: warrior / elem. 예: ROHSetClass elem */
 	UFUNCTION(Exec)
 	void ROHSetClass(FString ClassName);

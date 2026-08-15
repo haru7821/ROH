@@ -16,6 +16,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
+#include "ROH.h"
 
 AROHPlayerCharacter::AROHPlayerCharacter()
 {
@@ -105,6 +106,50 @@ bool AROHPlayerCharacter::BindSkillToSlot(int32 SlotIndex, FName SkillId, FStrin
 	}
 	DefaultAbilities[SlotIndex] = Def->AbilityClass;
 	return true;
+}
+
+TArray<FName> AROHPlayerCharacter::ExportBoundSkills() const
+{
+	TArray<FName> Result;
+	Result.Init(NAME_None, MaxSkillSlot);
+	if (!SkillTree)
+	{
+		return Result;
+	}
+	for (int32 Slot = 1; Slot <= MaxSkillSlot; ++Slot)
+	{
+		if (!DefaultAbilities.IsValidIndex(Slot) || !DefaultAbilities[Slot])
+		{
+			continue;
+		}
+		for (const FROHSkillDef& Def : UROHSkillTreeComponent::GetSkillDefs(SkillTree->GetPlayerClass()))
+		{
+			// 습득한 스킬의 배치만 저장 (미습득 기본 배치는 로드 시 재바인딩 불가 — 경고 스팸 방지)
+			if (Def.AbilityClass == DefaultAbilities[Slot] && SkillTree->GetRank(Def.SkillId) >= 1)
+			{
+				Result[Slot - 1] = Def.SkillId;
+				break;
+			}
+		}
+	}
+	return Result;
+}
+
+void AROHPlayerCharacter::RestoreBoundSkills(const TArray<FName>& SkillIds)
+{
+	for (int32 i = 0; i < SkillIds.Num() && i < MaxSkillSlot; ++i)
+	{
+		if (SkillIds[i].IsNone())
+		{
+			continue;
+		}
+		FString Error;
+		if (!BindSkillToSlot(i + 1, SkillIds[i], Error))
+		{
+			UE_LOG(LogROH, Warning, TEXT("세이브 슬롯 %d 배치 복원 실패 (%s): %s"),
+				i + 1, *SkillIds[i].ToString(), *Error);
+		}
+	}
 }
 
 void AROHPlayerCharacter::Tick(float DeltaSeconds)

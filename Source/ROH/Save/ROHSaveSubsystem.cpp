@@ -42,6 +42,7 @@ bool UROHSaveSubsystem::SaveCharacter(AROHPlayerCharacter* Player)
 	Save->SkillPoints = Progression->GetSkillPoints();
 	Save->AllocatedStats = Progression->GetAllocatedStats();
 	Save->SkillHardPoints = Player->GetSkillTree()->GetHardPoints();
+	Save->BoundSkillSlots = Player->ExportBoundSkills();
 	Player->GetInventory()->ExportState(Save->InventoryItems, Save->EquippedItems, Save->Gold);
 
 	const bool bSaved = UGameplayStatics::SaveGameToSlot(Save, SlotName, 0);
@@ -114,6 +115,7 @@ AROHPlayerCharacter* UROHSaveSubsystem::LoadCharacter(AROHPlayerCharacter* Curre
 	Player->GetProgression()->RestoreState(Save->Level, Save->XP, Save->StatPoints, Save->SkillPoints, Save->AllocatedStats);
 	Player->GetSkillTree()->RestoreState(Save->SkillHardPoints);
 	Player->GetInventory()->RestoreState(Save->InventoryItems, Save->EquippedItems, Save->Gold);
+	Player->RestoreBoundSkills(Save->BoundSkillSlots); // 스킬트리 복원 후 (랭크 검증 필요)
 
 	UE_LOG(LogROH, Log, TEXT("로드 성공 (Lv %d, %s)"), Save->Level, *Save->PlayerClassName);
 	return Player;

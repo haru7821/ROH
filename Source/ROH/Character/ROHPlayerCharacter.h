@@ -28,6 +28,12 @@ public:
 	/** 습득한 액티브 스킬을 슬롯(1~4)에 배치. 실패 사유는 OutError로 (콘솔 ROHBindSkill) */
 	bool BindSkillToSlot(int32 SlotIndex, FName SkillId, FString& OutError);
 
+	/** 세이브용: 슬롯 1~4의 스킬 ID (역조회, 매칭 없으면 None) */
+	TArray<FName> ExportBoundSkills() const;
+
+	/** 로드용: 저장된 슬롯 배치 재적용 (스킬트리 복원 후 호출 — 랭크 검증 통과 필요) */
+	void RestoreBoundSkills(const TArray<FName>& SkillIds);
+
 	static constexpr int32 MaxSkillSlot = 4;
 
 	/** E 상호작용: 주변 드랍 습득 → 없으면 인벤토리 첫 장비 장착. NPC 대화 등으로 확장 예정 */

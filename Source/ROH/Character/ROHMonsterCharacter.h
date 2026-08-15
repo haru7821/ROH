@@ -29,6 +29,9 @@ public:
 protected:
 	virtual void HandleDeath(AActor* Killer) override;
 
+	/** 빙의 시 AttackAbility를 ASC에 부여 (TryActivateAbilityByClass는 부여된 어빌리티만 발동 가능) */
+	virtual void PossessedBy(AController* NewController) override;
+
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Monster")
 	float AttackDamage = 10.f;
 

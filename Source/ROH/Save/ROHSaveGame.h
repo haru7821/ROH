@@ -44,6 +44,10 @@ public:
 	UPROPERTY()
 	TMap<FName, int32> SkillHardPoints;
 
+	/** 스킬 슬롯 배치 (인덱스 0~3 = 슬롯 1~4, None = 기본 배치 유지). 구버전 세이브엔 없음 → 빈 배열 */
+	UPROPERTY()
+	TArray<FName> BoundSkillSlots;
+
 	// --- 소지품 ---
 	UPROPERTY()
 	TArray<FROHItemInstance> InventoryItems;
