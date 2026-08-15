@@ -72,7 +72,12 @@ void UROHAbility_BossBarrage::ActivateAbility(const FGameplayAbilitySpecHandle H
 				const FVector MinionLocation = Monster->GetActorLocation()
 					+ Monster->GetActorRightVector() * Side * 250.f
 					+ Monster->GetActorForwardVector() * 100.f;
-				World->SpawnActor<AROHMonster_Grunt>(AROHMonster_Grunt::StaticClass(), MinionLocation, Monster->GetActorRotation(), MinionParams);
+				if (AROHMonster_Grunt* Minion = World->SpawnActor<AROHMonster_Grunt>(
+					AROHMonster_Grunt::StaticClass(), MinionLocation, Monster->GetActorRotation(), MinionParams))
+				{
+					// 마을 정리 면제 전파 (b34): 치트로 마을에 소환한 보스의 하수인은 함께 유지
+					Minion->SetExemptFromTownCleanup(Monster->IsExemptFromTownCleanup());
+				}
 			}
 			DebugDrawSwing(Monster->GetActorLocation(), 300.f);
 		}

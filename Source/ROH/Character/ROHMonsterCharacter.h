@@ -42,6 +42,14 @@ public:
 	EROHDamageType GetAttackDamageType() const { return AttackDamageType; }
 
 	/**
+	 * 마을 안전지대 정리 면제 (b34): 치트로 소환한 몬스터는 마을에서도 유지한다
+	 * (ROHSpawnBoss는 플레이어 전방 소환이라 마을에서 쓰면 즉시 제거되어 테스트가 막힌다).
+	 * 보스가 소환하는 하수인은 소환자의 면제를 물려받는다 (BossBarrage 참고).
+	 */
+	void SetExemptFromTownCleanup(bool bInExempt) { bExemptFromTownCleanup = bInExempt; }
+	bool IsExemptFromTownCleanup() const { return bExemptFromTownCleanup; }
+
+	/**
 	 * 기본 공격용 피해 파라미터: AttackDamage를 AttackDamageType에 맞는 유형 칸에 배분.
 	 * 물리만 명중 굴림 대상, 원소 공격은 주문 취급 (docs/10 §5.3)
 	 */
@@ -102,6 +110,9 @@ private:
 
 	/** 정예 등급 (승급은 1회만) */
 	EROHMonsterRank Rank = EROHMonsterRank::Normal;
+
+	/** 마을 정리 면제 (b34 — 치트 소환 전용, 세이브 대상 아님) */
+	bool bExemptFromTownCleanup = false;
 };
 
 /** 졸개: 평균적인 근접 몬스터 */

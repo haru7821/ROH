@@ -576,8 +576,11 @@ void UROHCheatManager::ROHSpawnBoss(FString Which)
 	const FVector SpawnLocation = PlayerPawn->GetActorLocation() + PlayerPawn->GetActorForwardVector() * 800.f + FVector(0.f, 0.f, 50.f);
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	if (GetWorld()->SpawnActor<AROHBossCharacter>(BossClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams))
+	if (AROHBossCharacter* SpawnedBoss = GetWorld()->SpawnActor<AROHBossCharacter>(BossClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams))
 	{
+		// 마을 정리 면제 (b34): 치트는 플레이어 전방에 소환하므로 마을에서 쓰면 즉시 제거되어
+		// 보스 패턴 테스트가 불가능해진다 — 치트 소환분만 안전지대 정리에서 제외
+		SpawnedBoss->SetExemptFromTownCleanup(true);
 		CheatPrint(bMorgath
 			? TEXT("액트 보스 모르가스 소환 — 화염탄 3연발은 좌우로 피하고, 하수인부터 정리하세요")
 			: TEXT("보스 발타르 소환 — 빨간 장판(내려찍기)은 밖으로 피하세요"));

@@ -7,6 +7,8 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
+#include "GameFramework/Pawn.h"             // 앵커용 플레이어 폰 위치 (b34)
+#include "GameFramework/PlayerController.h" // GetFirstPlayerController 반환 타입 (b34)
 #include "ROH.h"
 
 AROHGameMode::AROHGameMode()
@@ -60,11 +62,14 @@ void AROHGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!bAutoPlaceSpawnerIfMissing)
-	{
-		return;
-	}
+	// 지역 매니저 배치는 플래그와 무관하게 항상 수행한다 (Sup b34): 매니저가 없으면 마을 안전지대
+	// 개념 자체가 사라져 맵에 배치된 잔재 스포너가 마을에서 무제한 가동된다. 플래그는 이름 그대로
+	// "폴백 단독 스포너 자동 배치" 여부만 통제한다.
+	EnsureZoneManager();
+}
 
+void AROHGameMode::EnsureZoneManager()
+{
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
@@ -77,12 +82,41 @@ void AROHGameMode::BeginPlay()
 	}
 	if (!ZoneManager)
 	{
-		// 마을(0번 지역)이 플레이어 스타트를 감싸도록 스타트 위치에 앵커
+		// 마을(0번 지역)이 실제 플레이어 위치를 감싸도록 앵커 (b34):
+		// PlayerStart가 여러 개인 맵에서 FindPlayerStart(nullptr)는 엔진이 플레이어에게 실제로
+		// 사용한 스타트와 다른 것을 고를 수 있다(ChoosePlayerStart = 미점유 스타트 중 무작위).
+		// → 폰이 있으면 폰 위치가 정답. 아직 없으면 짧게 재시도한다.
 		FVector AnchorLocation(0.f, 0.f, 100.f);
-		if (const AActor* Start = FindPlayerStart(nullptr))
+		bool bAnchorResolved = false;
+		if (const APlayerController* FirstPC = GetWorld()->GetFirstPlayerController())
 		{
-			AnchorLocation = Start->GetActorLocation();
+			if (const APawn* PlayerPawn = FirstPC->GetPawn())
+			{
+				AnchorLocation = PlayerPawn->GetActorLocation();
+				bAnchorResolved = true;
+			}
 		}
+
+		if (!bAnchorResolved)
+		{
+			// 재시도 상한 (0.2초 × 10 = 2초). 스포너 초기 스폰(0.5초)보다 먼저 서는 것이 목표이고,
+			// 늦어져도 ZoneManager의 마을 침입 정리 타이머가 백스톱이 된다.
+			if (ZoneManagerRetryCount < 10)
+			{
+				++ZoneManagerRetryCount;
+				GetWorld()->GetTimerManager().SetTimer(ZoneManagerRetryHandle, this,
+					&AROHGameMode::EnsureZoneManager, 0.2f, false);
+				return;
+			}
+			// 상한 도달: 폰을 못 찾았으니 기존 규칙(플레이어 스타트)으로 확정
+			if (const AActor* Start = FindPlayerStart(nullptr))
+			{
+				AnchorLocation = Start->GetActorLocation();
+			}
+			UE_LOG(LogROH, Warning, TEXT("지역 매니저 앵커: 플레이어 폰을 찾지 못해 플레이어 스타트로 대체 (%s)"),
+				*AnchorLocation.ToCompactString());
+		}
+
 		ZoneManager = GetWorld()->SpawnActor<AROHZoneManager>(
 			AROHZoneManager::StaticClass(), AnchorLocation, FRotator::ZeroRotator, SpawnParams);
 		if (ZoneManager)
@@ -96,6 +130,10 @@ void AROHGameMode::BeginPlay()
 	}
 
 	// 2) 폴백: 지역 매니저 스폰 실패 시에만 기존 단독 스포너 자동 배치 유지
+	if (!bAutoPlaceSpawnerIfMissing)
+	{
+		return;
+	}
 	for (TActorIterator<AROHMonsterSpawner> It(GetWorld()); It; ++It)
 	{
 		return;

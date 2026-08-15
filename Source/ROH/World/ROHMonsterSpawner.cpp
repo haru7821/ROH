@@ -26,6 +26,7 @@ void AROHMonsterSpawner::ConfigureSpawner(const TArray<TSubclassOf<AROHMonsterCh
 	}
 	MaxAlive = FMath::Max(1, InMaxAlive);
 	MonsterLevelBonus = FMath::Max(0, InMonsterLevelBonus);
+	bZoneOwned = true; // 지역 매니저가 만든 스포너 표시 (안전지대 정리에서 제외)
 }
 
 void AROHMonsterSpawner::BeginPlay()

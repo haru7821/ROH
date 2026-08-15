@@ -7,6 +7,8 @@
 #include "Character/ROHBossCharacter.h"
 #include "Campaign/ROHCampaignSubsystem.h"
 #include "DrawDebugHelpers.h"
+#include "EngineUtils.h" // TActorIterator (마을 스포너/침입 몬스터 검사, b34)
+#include "TimerManager.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
 #include "ROH.h"
@@ -124,7 +126,128 @@ void AROHZoneManager::BeginPlay()
 		}
 	}
 
+	// 마을 안전지대 강제 (b34): 맵에 배치된 잔재 스포너 제거 + 침입 몬스터 정리 타이머.
+	// 존 배치 이후에 수행해야 방금 스폰한 전투 지역 스포너까지 검사 대상에 들어간다
+	// (전투 지역 스포너는 마을 반경 밖이라 제거되지 않는다).
+	RemoveSpawnersInTownZones();
+
+	bool bHasTownZone = false;
+	for (const FROHZoneDef& Zone : Zones)
+	{
+		if (Zone.bTown)
+		{
+			bHasTownZone = true;
+			break;
+		}
+	}
+	if (bHasTownZone)
+	{
+		// 저빈도 폴링(1초): 잔재 스포너가 이미 스폰한 개체 + 플레이어를 쫓아 들어온 개체 백스톱
+		GetWorld()->GetTimerManager().SetTimer(TownCleanupTimerHandle, this,
+			&AROHZoneManager::CleanupTownIntruders, 1.f, true);
+	}
+
 	UE_LOG(LogROH, Log, TEXT("지역 매니저: %d개 지역 구성 완료 (%s)"), Zones.Num(), *GetActorLocation().ToCompactString());
+}
+
+bool AROHZoneManager::IsInsideTownZone(const FVector& Location) const
+{
+	for (int32 ZoneIndex = 0; ZoneIndex < Zones.Num(); ++ZoneIndex)
+	{
+		if (Zones[ZoneIndex].bTown
+			&& FVector::DistSquared2D(Location, GetZoneCenter(ZoneIndex)) <= FMath::Square(Zones[ZoneIndex].Radius))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void AROHZoneManager::RemoveSpawnersInTownZones()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 순회 중 Destroy는 반복자 무효화 위험이 있어 수집 후 제거.
+	// 판정 (Sup b34): 맵에 직접 배치된 스포너(IsZoneOwned=false)는 위치와 무관하게 제거한다 —
+	// 지역 설정을 못 받아 기본값으로 도는 잔재이고, 마을 반경 경계에 걸치면 위치 판정만으로는
+	// 새어나간다. 지역 매니저가 만든 스포너는 마을 안에 있을 때만 제거(정상 상황엔 해당 없음).
+	// 이 함수는 존 배치 루프 뒤에 도는데, 그 스포너들은 스폰 직후 ConfigureSpawner를 받으므로 안전.
+	TArray<AROHMonsterSpawner*> DoomedSpawners;
+	for (TActorIterator<AROHMonsterSpawner> It(World); It; ++It)
+	{
+		AROHMonsterSpawner* Spawner = *It;
+		if (!Spawner || Spawner->IsActorBeingDestroyed())
+		{
+			continue;
+		}
+		if (!Spawner->IsZoneOwned() || IsInsideTownZone(Spawner->GetActorLocation()))
+		{
+			DoomedSpawners.Add(Spawner);
+		}
+	}
+
+	for (AROHMonsterSpawner* Spawner : DoomedSpawners)
+	{
+		UE_LOG(LogROH, Warning, TEXT("지역 매니저가 관리하지 않는 몬스터 스포너를 제거했습니다 (%s) — 맵에 배치된 잔재입니다"),
+			*Spawner->GetActorLocation().ToCompactString());
+		Spawner->Destroy();
+	}
+}
+
+void AROHZoneManager::CleanupTownIntruders()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 대상: 적대 팀(TeamId != 0) 몬스터/보스만. 플레이어(TeamId 0)·NPC·웨이포인트·보관함은
+	// AROHMonsterCharacter가 아니거나 팀이 달라 애초에 순회 대상에 들어오지 않는다.
+	TArray<AROHMonsterCharacter*> Intruders;
+	for (TActorIterator<AROHMonsterCharacter> It(World); It; ++It)
+	{
+		AROHMonsterCharacter* Monster = *It;
+		if (!Monster || Monster->IsActorBeingDestroyed() || Monster->GetTeamId() == 0)
+		{
+			continue;
+		}
+		// 시체는 SetLifeSpan이 정리한다 — 여기서 건드리면 아래 OnDeath 재브로드캐스트로 카운트 이중 감소
+		if (!Monster->IsAlive())
+		{
+			continue;
+		}
+		// 보스는 퀘스트 필수 자원 — 지우면 세션 내 재조우 불가 (존 보스는 BeginPlay 1회 스폰).
+		// 마을까지 따라오면 플레이어가 처치하면 되고, 처치는 정상 퀘스트 진행으로 집계된다 (Sup b34)
+		if (Monster->IsA<AROHBossCharacter>())
+		{
+			continue;
+		}
+		if (Monster->IsExemptFromTownCleanup()) // 치트 소환 (+그 하수인) — 마을 테스트 보호
+		{
+			continue;
+		}
+		if (IsInsideTownZone(Monster->GetActorLocation()))
+		{
+			Intruders.Add(Monster);
+		}
+	}
+
+	for (AROHMonsterCharacter* Monster : Intruders)
+	{
+		// 로그는 Verbose (1초 폴링이라 스팸 방지). 조용히 소멸 — 드랍/경험치 없음(사망 처리 아님)
+		UE_LOG(LogROH, Verbose, TEXT("마을 침입 몬스터 제거: %s (%s)"),
+			*Monster->GetName(), *Monster->GetActorLocation().ToCompactString());
+		// 스포너 개체 수 회수 + 재스폰 예약 (Sup b34): Destroy는 사망 파이프라인을 우회해
+		// OnMonsterDeath가 안 불리고, 그러면 추격당해 마을로 끌려온 개체만큼 AliveCount가
+		// 영구 누수돼 해당 지역이 비어버린다. 구독자는 스포너뿐이라 보상/퀘스트 집계는 영향 없음
+		Monster->OnDeath.Broadcast(Monster);
+		Monster->Destroy();
+	}
 }
 
 void AROHZoneManager::Tick(float DeltaSeconds)

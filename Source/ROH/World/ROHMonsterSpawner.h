@@ -27,6 +27,13 @@ public:
 	 */
 	void ConfigureSpawner(const TArray<TSubclassOf<AROHMonsterCharacter>>& InClasses, int32 InMaxAlive, int32 InMonsterLevelBonus);
 
+	/**
+	 * 지역 매니저가 배치·설정한 스포너인지 (b34).
+	 * false = 맵에 직접 배치된 스포너 — 지역 설정을 못 받아 기본값으로 돌기 때문에
+	 * 안전지대 검사에서 위치와 무관하게 정리 대상이 된다 (마을 잔재 스포너 방어).
+	 */
+	bool IsZoneOwned() const { return bZoneOwned; }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -56,4 +63,7 @@ protected:
 private:
 	int32 AliveCount = 0;
 	int32 NextClassIndex = 0;
+
+	/** ConfigureSpawner를 받은 적이 있는가 = 지역 매니저 소유 (b34) */
+	bool bZoneOwned = false;
 };
