@@ -7,6 +7,7 @@
 #include "UI/ROHSkillTreeWindow.h"
 #include "UI/ROHVendorWindow.h"
 #include "UI/ROHStashWindow.h"
+#include "UI/ROHParagonWindow.h"
 #include "Blueprint/UserWidget.h" // CreateWidget
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -77,9 +78,10 @@ void AROHPlayerController::BuildRuntimeInput()
 	InteractAction = MakeAction(TEXT("IA_Interact_Runtime"), EKeys::E);
 	InventoryAction = MakeAction(TEXT("IA_Inventory_Runtime"), EKeys::I);
 	SkillTreeAction = MakeAction(TEXT("IA_SkillTree_Runtime"), EKeys::K);
+	ParagonAction = MakeAction(TEXT("IA_Paragon_Runtime"), EKeys::P);
 	DefaultMappingContext = RuntimeIMC;
 
-	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3·4 스킬 / E 상호작용 / I 인벤토리 / K 스킬트리)"));
+	UE_LOG(LogROH, Log, TEXT("코드 정의 입력 적용 (좌클릭 이동 / 우클릭 공격 / 1·2·3·4 스킬 / E 상호작용 / I 인벤토리 / K 스킬트리 / P 정복자)"));
 }
 
 void AROHPlayerController::SetupInputComponent()
@@ -129,6 +131,10 @@ void AROHPlayerController::SetupInputComponent()
 		{
 			EIC->BindAction(SkillTreeAction, ETriggerEvent::Started, this, &AROHPlayerController::OnToggleSkillTree);
 		}
+		if (ParagonAction)
+		{
+			EIC->BindAction(ParagonAction, ETriggerEvent::Started, this, &AROHPlayerController::OnToggleParagon);
+		}
 	}
 }
 
@@ -149,6 +155,7 @@ void AROHPlayerController::ToggleUiWindow(EROHUiWindowKind Kind)
 	case EROHUiWindowKind::Inventory: WindowClass = UROHInventoryWindow::StaticClass(); break;
 	case EROHUiWindowKind::SkillTree: WindowClass = UROHSkillTreeWindow::StaticClass(); break;
 	case EROHUiWindowKind::Stash:     WindowClass = UROHStashWindow::StaticClass(); break;
+	case EROHUiWindowKind::Paragon:   WindowClass = UROHParagonWindow::StaticClass(); break;
 	default: break; // Vendor는 OpenVendorWindow 전용 (NPC 참조 필요)
 	}
 	if (!WindowClass)
@@ -203,6 +210,11 @@ void AROHPlayerController::OnToggleSkillTree()
 	ToggleUiWindow(EROHUiWindowKind::SkillTree);
 }
 
+void AROHPlayerController::OnToggleParagon()
+{
+	ToggleUiWindow(EROHUiWindowKind::Paragon);
+}
+
 void AROHPlayerController::OnInteract()
 {
 	if (AROHPlayerCharacter* PlayerCharacter = Cast<AROHPlayerCharacter>(GetPawn()))
@@ -213,6 +225,11 @@ void AROHPlayerController::OnInteract()
 
 void AROHPlayerController::OnBasicAttack()
 {
+	// UI 창이 열려 있으면 게임 입력 차단 (UI 2차 — 창 조작 중 오발 방지)
+	if (IsUiWindowOpen())
+	{
+		return;
+	}
 	ActivateSlot(0);
 }
 
@@ -238,6 +255,11 @@ void AROHPlayerController::OnSkill4()
 
 void AROHPlayerController::ActivateSlot(int32 SlotIndex)
 {
+	// UI 창이 열려 있으면 스킬 1~4 포함 전 슬롯 차단 (UI 2차)
+	if (IsUiWindowOpen())
+	{
+		return;
+	}
 	if (AROHPlayerCharacter* PlayerCharacter = Cast<AROHPlayerCharacter>(GetPawn()))
 	{
 		PlayerCharacter->ActivateAbilityBySlot(SlotIndex);
@@ -246,12 +268,24 @@ void AROHPlayerController::ActivateSlot(int32 SlotIndex)
 
 void AROHPlayerController::OnSetDestinationStarted()
 {
+	// UI 창이 열려 있으면 좌클릭 이동 차단 (UI 2차 — 창 배경 클릭이 이동으로 새는 오발 방지)
+	if (IsUiWindowOpen())
+	{
+		// 누른 채 창을 닫고 떼면 Released가 스테일 CachedDestination으로 클릭 이동을
+		// 발동시킨다 — 홀드 판정치를 넘겨 이 클릭이 이동으로 이어지지 않게 한다
+		FollowTime = ShortPressThreshold + 1.f;
+		return;
+	}
 	StopMovement();
 	FollowTime = 0.f;
 }
 
 void AROHPlayerController::OnSetDestinationTriggered()
 {
+	if (IsUiWindowOpen())
+	{
+		return;
+	}
 	FollowTime += GetWorld()->GetDeltaSeconds();
 
 	FHitResult Hit;
@@ -270,6 +304,10 @@ void AROHPlayerController::OnSetDestinationTriggered()
 
 void AROHPlayerController::OnSetDestinationReleased()
 {
+	if (IsUiWindowOpen())
+	{
+		return;
+	}
 	// 짧은 클릭이면 내비게이션으로 목적지까지 이동
 	if (FollowTime <= ShortPressThreshold)
 	{

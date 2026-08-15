@@ -17,6 +17,14 @@ namespace
 	{
 		return FLinearColor::FromSRGBColor(UROHItemDatabase::GetQualityColor(Quality));
 	}
+
+	// 구매 목록(베이스만 있는 재고) 툴팁용 미리보기 인스턴스 — 접사/소켓 굴림 없음 (베이스 성능/가치만)
+	FROHItemInstance MakeVendorPreviewItem(FName BaseId)
+	{
+		FROHItemInstance Preview;
+		Preview.BaseId = BaseId;
+		return Preview;
+	}
 }
 
 void UROHVendorWindow::SetNpc(AROHTownNpc* InNpc)
@@ -102,8 +110,9 @@ void UROHVendorWindow::RefreshContents()
 		{
 			if (const FROHItemBaseDef* Base = Database->FindBase(GeneralStock[StockIndex]))
 			{
-				MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
+				UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
 					*Base->DisplayName.ToString(), Base->GoldValue), TEXT("BuyBase"), StockIndex, FLinearColor::White);
+				Button->SetToolTipText(Database->GetItemTooltip(MakeVendorPreviewItem(Base->BaseId))); // 호버 상세 (UI 2차)
 			}
 		}
 		// 판매: 전 품목 (미감정 포함 — docs/12), 판매가 = GoldValue/2
@@ -112,9 +121,10 @@ void UROHVendorWindow::RefreshContents()
 		{
 			const FROHItemBaseDef* Base = Database->FindBase(Items[ItemIndex].BaseId);
 			const int32 SellPrice = Base ? Base->GoldValue / 2 : 0;
-			MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
+			UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
 				*Database->GetItemDisplayName(Items[ItemIndex]).ToString(), SellPrice),
 				TEXT("Sell"), ItemIndex, VendorQualityColor(Items[ItemIndex].Quality));
+			Button->SetToolTipText(Database->GetItemTooltip(Items[ItemIndex]));
 		}
 		break;
 	}
@@ -140,9 +150,10 @@ void UROHVendorWindow::RefreshContents()
 		{
 			const FROHItemBaseDef* Base = Database->FindBase(SmithStock[StockIndex].BaseId);
 			const int32 Price = Base ? Base->GoldValue * 3 : 0;
-			MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
+			UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
 				*Database->GetItemDisplayName(SmithStock[StockIndex]).ToString(), Price),
 				TEXT("BuySmith"), StockIndex, VendorQualityColor(SmithStock[StockIndex].Quality));
+			Button->SetToolTipText(Database->GetItemTooltip(SmithStock[StockIndex])); // 호버 상세 (UI 2차)
 		}
 		if (SmithStock.Num() == 0)
 		{
@@ -159,8 +170,10 @@ void UROHVendorWindow::RefreshContents()
 		{
 			if (const FROHRuneDef* Rune = Database->FindRuneByTier(Tier))
 			{
-				MakeActionButton(ContentBox, FString::Printf(TEXT("%s 룬 (T%d) — %d골드"),
+				UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s 룬 (T%d) — %d골드"),
 					*Rune->DisplayName.ToString(), Tier, Tier * 100), TEXT("BuyRune"), Tier, FLinearColor::White);
+				Button->SetToolTipText(Database->GetItemTooltip(
+					MakeVendorPreviewItem(UROHItemDatabase::GetRuneBaseId(Rune->RuneId)))); // 호버 상세 (UI 2차)
 			}
 		}
 		// 판매: 룬/재료(보석·조각)만
@@ -172,9 +185,10 @@ void UROHVendorWindow::RefreshContents()
 			{
 				continue;
 			}
-			MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
+			UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s — %d골드"),
 				*Database->GetItemDisplayName(Items[ItemIndex]).ToString(), Base->GoldValue / 2),
 				TEXT("Sell"), ItemIndex, FLinearColor::White);
+			Button->SetToolTipText(Database->GetItemTooltip(Items[ItemIndex]));
 		}
 		break;
 	}
@@ -184,10 +198,15 @@ void UROHVendorWindow::RefreshContents()
 		MakeText(ContentBox, TEXT("--- 구매 (치유물약) ---"), HeaderColor);
 		if (const FROHItemBaseDef* Potion = Database->FindBase(TEXT("HealthPotion")))
 		{
-			MakeActionButton(ContentBox, FString::Printf(TEXT("치유물약 1개 — %d골드"), Potion->GoldValue),
+			const FText PotionTooltip = Database->GetItemTooltip(MakeVendorPreviewItem(Potion->BaseId));
+			UROHActionButton* SingleButton = MakeActionButton(ContentBox,
+				FString::Printf(TEXT("치유물약 1개 — %d골드"), Potion->GoldValue),
 				TEXT("BuyPotion"), 1, FLinearColor(0.4f, 1.f, 0.4f));
-			MakeActionButton(ContentBox, FString::Printf(TEXT("치유물약 5개 — %d골드"), Potion->GoldValue * 5),
+			SingleButton->SetToolTipText(PotionTooltip); // 호버 상세 (UI 2차)
+			UROHActionButton* BundleButton = MakeActionButton(ContentBox,
+				FString::Printf(TEXT("치유물약 5개 — %d골드"), Potion->GoldValue * 5),
 				TEXT("BuyPotion"), 5, FLinearColor(0.4f, 1.f, 0.4f));
+			BundleButton->SetToolTipText(PotionTooltip);
 		}
 		break;
 	}
@@ -222,9 +241,10 @@ void UROHVendorWindow::RefreshContents()
 			{
 				continue;
 			}
-			MakeActionButton(ContentBox, FString::Printf(TEXT("%s — 감정 %d골드"),
+			UROHActionButton* Button = MakeActionButton(ContentBox, FString::Printf(TEXT("%s — 감정 %d골드"),
 				*Database->GetItemDisplayName(Items[ItemIndex]).ToString(), IdentifyCost),
 				TEXT("Identify"), ItemIndex, VendorQualityColor(Items[ItemIndex].Quality));
+			Button->SetToolTipText(Database->GetItemTooltip(Items[ItemIndex])); // 미감정 — 옵션 숨김 툴팁
 		}
 		break;
 	}

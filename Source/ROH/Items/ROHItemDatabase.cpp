@@ -12,6 +12,75 @@ namespace
 		const int32 Seed = static_cast<int32>(FPlatformTime::Cycles() & 0x7fffffff) ^ (FMath::Rand() << 16);
 		return Seed != 0 ? Seed : 1;
 	}
+
+	// 어트리뷰트 한글 라벨 + %단위 여부 (툴팁/정복자 창 표기 — FormatAttributeBonus 전용)
+	struct FAttributeLabelEntry
+	{
+		FGameplayAttribute Attribute;
+		const TCHAR* Label = TEXT("?");
+		bool bPercent = false;
+	};
+
+	const FAttributeLabelEntry* FindAttributeLabelEntry(const FGameplayAttribute& Attribute)
+	{
+		static const TArray<FAttributeLabelEntry> Entries = {
+			{ UROHAttributeSet::GetAttackPowerAttribute(),         TEXT("공격력"),          false },
+			{ UROHAttributeSet::GetDefenseAttribute(),             TEXT("방어등급"),        false },
+			{ UROHAttributeSet::GetAttackRatingAttribute(),        TEXT("명중률"),          false },
+			{ UROHAttributeSet::GetMaxHealthAttribute(),           TEXT("최대 생명력"),     false },
+			{ UROHAttributeSet::GetMaxManaAttribute(),             TEXT("최대 마나"),       false },
+			{ UROHAttributeSet::GetHealthRegenAttribute(),         TEXT("생명력 재생"),     false },
+			{ UROHAttributeSet::GetManaRegenAttribute(),           TEXT("마나 재생"),       false },
+			{ UROHAttributeSet::GetStrengthAttribute(),            TEXT("힘"),              false },
+			{ UROHAttributeSet::GetDexterityAttribute(),           TEXT("민첩"),            false },
+			{ UROHAttributeSet::GetVitalityAttribute(),            TEXT("활력"),            false },
+			{ UROHAttributeSet::GetEnergyAttribute(),              TEXT("에너지"),          false },
+			{ UROHAttributeSet::GetMagicFindAttribute(),           TEXT("매직파인드"),      true },
+			{ UROHAttributeSet::GetCritChanceAttribute(),          TEXT("치명타 확률"),     true },
+			{ UROHAttributeSet::GetCritDamageAttribute(),          TEXT("치명타 피해"),     true },
+			{ UROHAttributeSet::GetRunePowerAttribute(),           TEXT("룬위력"),          true },
+			{ UROHAttributeSet::GetAttackSpeedPctAttribute(),      TEXT("공격 속도"),       true },
+			{ UROHAttributeSet::GetCastSpeedPctAttribute(),        TEXT("시전 속도"),       true },
+			{ UROHAttributeSet::GetPhysicalResistanceAttribute(),  TEXT("물리 피해감소"),   true },
+			{ UROHAttributeSet::GetFireResistanceAttribute(),      TEXT("화염 저항"),       true },
+			{ UROHAttributeSet::GetColdResistanceAttribute(),      TEXT("냉기 저항"),       true },
+			{ UROHAttributeSet::GetLightningResistanceAttribute(), TEXT("번개 저항"),       true },
+			{ UROHAttributeSet::GetPoisonResistanceAttribute(),    TEXT("독 저항"),         true },
+			{ UROHAttributeSet::GetShadowResistanceAttribute(),    TEXT("그림자 저항"),     true },
+			{ UROHAttributeSet::GetMoveSpeedAttribute(),           TEXT("이동 속도"),       false },
+		};
+		for (const FAttributeLabelEntry& Entry : Entries)
+		{
+			if (Entry.Attribute == Attribute)
+			{
+				return &Entry;
+			}
+		}
+		return nullptr;
+	}
+
+	// 정수는 소수점 없이, 고대 ×1.5 등 반정수는 한 자리로
+	FString FormatBonusNumber(float Value)
+	{
+		const float Rounded = FMath::RoundToFloat(Value);
+		return FMath::IsNearlyEqual(Value, Rounded, 0.01f)
+			? FString::Printf(TEXT("%.0f"), Rounded)
+			: FString::Printf(TEXT("%.1f"), Value);
+	}
+
+	// 장비 슬롯 한글명 (툴팁 종류 표기 — 유니티 빌드에서 창 쪽 익명 헬퍼와 충돌하지 않게 고유명)
+	const TCHAR* TooltipSlotLabel(EROHEquipSlot Slot)
+	{
+		switch (Slot)
+		{
+		case EROHEquipSlot::Weapon: return TEXT("무기");
+		case EROHEquipSlot::Shield: return TEXT("방패");
+		case EROHEquipSlot::Helm:   return TEXT("투구");
+		case EROHEquipSlot::Chest:  return TEXT("흉갑");
+		case EROHEquipSlot::Boots:  return TEXT("장화");
+		default:                    return TEXT("장비");
+		}
+	}
 }
 
 void UROHItemDatabase::Initialize(FSubsystemCollectionBase& Collection)
@@ -951,6 +1020,278 @@ void UROHItemDatabase::RefreshItemAffixes(FROHItemInstance& Item) const
 			Affix.Attribute = Def->Attribute;
 		}
 	}
+}
+
+FROHResolvedEquipBonuses UROHItemDatabase::ResolveEquipBonuses(const FROHItemInstance& Item) const
+{
+	// 장착 GE(ApplyEquipEffect)와 툴팁의 단일 소스 — 출처 추가 시 반드시 여기만 수정
+	FROHResolvedEquipBonuses Resolved;
+
+	const FROHItemBaseDef* Base = FindBase(Item.BaseId);
+	if (!Base)
+	{
+		return Resolved;
+	}
+
+	auto AddBonus = [](TArray<FROHResolvedBonus>& Bonuses, const FGameplayAttribute& Attribute, float Value)
+	{
+		FROHResolvedBonus Bonus;
+		Bonus.Attribute = Attribute;
+		Bonus.Value = Value;
+		Bonuses.Add(Bonus);
+	};
+
+	// 베이스 성능
+	if (Base->DamageMax > 0.f)
+	{
+		AddBonus(Resolved.BaseBonuses, UROHAttributeSet::GetAttackPowerAttribute(), (Base->DamageMin + Base->DamageMax) * 0.5f);
+	}
+	if (Base->Armor > 0.f)
+	{
+		AddBonus(Resolved.BaseBonuses, UROHAttributeSet::GetDefenseAttribute(), Base->Armor);
+	}
+
+	// 접사 (라이브 해석 — Item.Affixes와 인덱스 정렬 유지, 무효 어트리뷰트 필터는 GE 적용측 담당)
+	for (const FROHAffixRoll& Affix : Item.Affixes)
+	{
+		AddBonus(Resolved.AffixBonuses, Affix.Attribute, Affix.Value);
+	}
+
+	// 소켓 룬 (세이브엔 ID만 — 보너스는 항상 DB에서 해석)
+	for (const FName& RuneId : Item.SocketedRunes)
+	{
+		if (const FROHRuneDef* Rune = FindRune(RuneId))
+		{
+			AddBonus(Resolved.RuneBonuses, Rune->BonusAttribute, Rune->BonusValue);
+			Resolved.TotalRunePower += Rune->RunePower;
+		}
+	}
+
+	// 완성 룬워드
+	if (!Item.RunewordId.IsNone())
+	{
+		if (const FROHRunewordDef* Runeword = FindRuneword(Item.RunewordId))
+		{
+			for (const FROHRunewordBonus& Bonus : Runeword->Bonuses)
+			{
+				AddBonus(Resolved.RunewordBonuses, Bonus.Attribute, Bonus.Value);
+			}
+			Resolved.TotalRunePower += Runeword->RunePower;
+		}
+	}
+
+	// 세트 피스 자체 옵션 (조합 보너스는 RefreshSetBonuses의 별도 GE가 담당)
+	if (!Item.SetPieceId.IsNone())
+	{
+		if (const FROHSetPieceDef* Piece = FindSetPiece(Item.SetPieceId))
+		{
+			for (const FROHRunewordBonus& Bonus : Piece->Bonuses)
+			{
+				AddBonus(Resolved.SetPieceBonuses, Bonus.Attribute, Bonus.Value);
+			}
+		}
+	}
+
+	// 유니크/고대 고정 옵션 — 고대는 옵션 ×1.5 + 룬 위력 +3
+	if (!Item.UniqueId.IsNone())
+	{
+		if (const FROHUniqueDef* Unique = FindUnique(Item.UniqueId))
+		{
+			const bool bAncient = (Item.Quality == EROHItemQuality::Ancient);
+			const float BonusMult = bAncient ? AncientBonusMult : 1.f;
+			for (const FROHRunewordBonus& Bonus : Unique->Bonuses)
+			{
+				AddBonus(Resolved.UniqueBonuses, Bonus.Attribute, Bonus.Value * BonusMult);
+			}
+			Resolved.TotalRunePower += Unique->RunePower + (bAncient ? AncientRunePowerBonus : 0.f);
+		}
+	}
+	return Resolved;
+}
+
+FString UROHItemDatabase::FormatAttributeBonus(const FGameplayAttribute& Attribute, float Value)
+{
+	const FAttributeLabelEntry* Entry = FindAttributeLabelEntry(Attribute);
+	const FString Label = Entry ? FString(Entry->Label) : (Attribute.IsValid() ? Attribute.GetName() : FString(TEXT("?")));
+	return FString::Printf(TEXT("%s %s%s%s"), *Label,
+		Value < 0.f ? TEXT("-") : TEXT("+"), *FormatBonusNumber(FMath::Abs(Value)),
+		(Entry && Entry->bPercent) ? TEXT("%") : TEXT(""));
+}
+
+const TCHAR* UROHItemDatabase::GetQualityLabel(EROHItemQuality Quality)
+{
+	switch (Quality)
+	{
+	case EROHItemQuality::Magic:    return TEXT("마법");
+	case EROHItemQuality::Rare:     return TEXT("레어");
+	case EROHItemQuality::Set:      return TEXT("세트");
+	case EROHItemQuality::Unique:   return TEXT("유니크");
+	case EROHItemQuality::Runeword: return TEXT("룬워드");
+	case EROHItemQuality::Ancient:  return TEXT("고대");
+	default:                        return TEXT("일반");
+	}
+}
+
+FText UROHItemDatabase::GetItemTooltip(const FROHItemInstance& Item) const
+{
+	const FROHItemBaseDef* Base = FindBase(Item.BaseId);
+	if (!Base)
+	{
+		return FText::FromString(TEXT("알 수 없는 아이템"));
+	}
+
+	TArray<FString> Lines;
+	Lines.Add(GetItemDisplayName(Item).ToString());
+
+	// 등급/종류/아이템 레벨
+	if (Base->Kind == EROHItemKind::Equipment)
+	{
+		Lines.Add(FString::Printf(TEXT("%s %s | 아이템 레벨 %d"),
+			GetQualityLabel(Item.Quality), TooltipSlotLabel(Base->Slot), Item.ItemLevel));
+	}
+	else
+	{
+		switch (Base->Kind)
+		{
+		case EROHItemKind::Potion:   Lines.Add(TEXT("종류: 물약")); break;
+		case EROHItemKind::Rune:     Lines.Add(TEXT("종류: 룬 (소켓 재료)")); break;
+		case EROHItemKind::Material: Lines.Add(TEXT("종류: 재료")); break;
+		default: break;
+		}
+	}
+
+	// 기본 성능 (베이스 정의에 있는 것만)
+	if (Base->DamageMax > 0.f)
+	{
+		Lines.Add(FString::Printf(TEXT("무기 피해 %.0f~%.0f (평균 %s)"),
+			Base->DamageMin, Base->DamageMax, *FormatBonusNumber((Base->DamageMin + Base->DamageMax) * 0.5f)));
+	}
+	if (Base->Armor > 0.f)
+	{
+		Lines.Add(FString::Printf(TEXT("방어등급 %.0f"), Base->Armor));
+	}
+	if (Base->PotionHealAmount > 0.f)
+	{
+		Lines.Add(FString::Printf(TEXT("사용 시 생명력 %.0f 회복"), Base->PotionHealAmount));
+	}
+	if (Base->RequiredLevel > 1)
+	{
+		Lines.Add(FString::Printf(TEXT("필요 레벨 %d"), Base->RequiredLevel));
+	}
+
+	// 룬 아이템: 소켓 시 보너스 (베이스 명명 규약 역조회)
+	if (const FROHRuneDef* RuneDef = FindRuneByBaseId(Item.BaseId))
+	{
+		Lines.Add(FString::Printf(TEXT("티어 %d — 소켓 시: %s, 룬위력 +%.1f%%"),
+			RuneDef->Tier, *FormatAttributeBonus(RuneDef->BonusAttribute, RuneDef->BonusValue), RuneDef->RunePower));
+		Lines.Add(TEXT("같은 룬 3개 → 상위 티어 1개 (ROHTransmute)"));
+	}
+
+	const FROHResolvedEquipBonuses Resolved = ResolveEquipBonuses(Item);
+
+	if (Item.bUnidentified)
+	{
+		// 미감정 (docs/12): 접사/고정 옵션 전부 숨김 — 등급색만으로 기대감
+		Lines.Add(TEXT("미감정 — 감정 필요 (셀바 50골드 / ROHIdentify)"));
+	}
+	else
+	{
+		// 접사 (라이브 해석 — Resolved.AffixBonuses는 Item.Affixes와 인덱스 정렬)
+		if (Item.Affixes.Num() > 0)
+		{
+			Lines.Add(TEXT("--- 접사 ---"));
+			for (int32 AffixIndex = 0; AffixIndex < Item.Affixes.Num(); ++AffixIndex)
+			{
+				const FROHAffixDef* AffixDef = FindAffix(Item.Affixes[AffixIndex].AffixId);
+				const FROHResolvedBonus& Bonus = Resolved.AffixBonuses[AffixIndex];
+				Lines.Add(FString::Printf(TEXT("%s (%s)"),
+					*FormatAttributeBonus(Bonus.Attribute, Bonus.Value),
+					AffixDef ? *AffixDef->DisplayName.ToString() : *Item.Affixes[AffixIndex].AffixId.ToString()));
+			}
+		}
+	}
+
+	// 소켓/삽입 룬 (미감정도 소켓 수는 표시 — 삽입은 감정 후 가능)
+	if (Base->Kind == EROHItemKind::Equipment && Item.MaxSockets > 0)
+	{
+		Lines.Add(FString::Printf(TEXT("--- 소켓 %d/%d ---"), Item.SocketedRunes.Num(), Item.MaxSockets));
+		for (int32 SocketIndex = 0; SocketIndex < Item.MaxSockets; ++SocketIndex)
+		{
+			if (!Item.SocketedRunes.IsValidIndex(SocketIndex))
+			{
+				Lines.Add(TEXT("(빈 소켓)"));
+			}
+			else if (const FROHRuneDef* SocketRune = FindRune(Item.SocketedRunes[SocketIndex]))
+			{
+				Lines.Add(FString::Printf(TEXT("%s 룬: %s, 룬위력 +%.1f%%"),
+					*SocketRune->DisplayName.ToString(),
+					*FormatAttributeBonus(SocketRune->BonusAttribute, SocketRune->BonusValue), SocketRune->RunePower));
+			}
+			else
+			{
+				Lines.Add(FString::Printf(TEXT("%s (미등록 룬)"), *Item.SocketedRunes[SocketIndex].ToString()));
+			}
+		}
+	}
+
+	if (!Item.bUnidentified)
+	{
+		// 완성 룬워드 보너스
+		if (!Item.RunewordId.IsNone())
+		{
+			if (const FROHRunewordDef* Runeword = FindRuneword(Item.RunewordId))
+			{
+				Lines.Add(FString::Printf(TEXT("--- 룬워드: %s ---"), *Runeword->DisplayName.ToString()));
+				for (const FROHResolvedBonus& Bonus : Resolved.RunewordBonuses)
+				{
+					Lines.Add(FormatAttributeBonus(Bonus.Attribute, Bonus.Value));
+				}
+				if (Runeword->RunePower > 0.f)
+				{
+					Lines.Add(FString::Printf(TEXT("룬위력 +%.1f%%"), Runeword->RunePower));
+				}
+			}
+		}
+
+		// 유니크/고대 고정 옵션 (고대는 ×1.5 반영치 표기)
+		if (!Item.UniqueId.IsNone() && Resolved.UniqueBonuses.Num() > 0)
+		{
+			Lines.Add(Item.Quality == EROHItemQuality::Ancient
+				? TEXT("--- 고대 옵션 (유니크 ×1.5) ---") : TEXT("--- 유니크 옵션 ---"));
+			for (const FROHResolvedBonus& Bonus : Resolved.UniqueBonuses)
+			{
+				Lines.Add(FormatAttributeBonus(Bonus.Attribute, Bonus.Value));
+			}
+		}
+
+		// 세트 자체 옵션 + 소속
+		if (!Item.SetPieceId.IsNone())
+		{
+			if (Resolved.SetPieceBonuses.Num() > 0)
+			{
+				Lines.Add(TEXT("--- 세트 옵션 ---"));
+				for (const FROHResolvedBonus& Bonus : Resolved.SetPieceBonuses)
+				{
+					Lines.Add(FormatAttributeBonus(Bonus.Attribute, Bonus.Value));
+				}
+			}
+			const FROHSetDef* OwningSet = nullptr;
+			if (FindSetPiece(Item.SetPieceId, &OwningSet) && OwningSet)
+			{
+				Lines.Add(FString::Printf(TEXT("세트: %s (%d피스 — 장착 수만큼 보너스)"),
+					*OwningSet->DisplayName.ToString(), OwningSet->Pieces.Num()));
+			}
+		}
+
+		// 총 룬위력 (룬+룬워드+유니크/고대 — docs/10 §5.2 최종 피해 배율 합산원)
+		if (Resolved.TotalRunePower > 0.f)
+		{
+			Lines.Add(FString::Printf(TEXT("룬위력 합계 +%.1f%% (최종 피해 배율)"), Resolved.TotalRunePower));
+		}
+	}
+
+	Lines.Add(FString::Printf(TEXT("가치: %d골드"), Base->GoldValue));
+	return FText::FromString(FString::Join(Lines, TEXT("\n")));
 }
 
 FColor UROHItemDatabase::GetQualityColor(EROHItemQuality Quality)

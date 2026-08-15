@@ -91,8 +91,9 @@ void UROHInventoryWindow::RefreshContents()
 		{
 			const FString Label = FString::Printf(TEXT("%s: %s%s"), EquipSlotLabel(EquipSlot),
 				*Database->GetItemDisplayName(*Item).ToString(), *SocketSummary(*Database, *Item));
-			MakeActionButton(EquipColumn, Label, TEXT("Unequip"), static_cast<int32>(EquipSlot),
+			UROHActionButton* Button = MakeActionButton(EquipColumn, Label, TEXT("Unequip"), static_cast<int32>(EquipSlot),
 				QualityLinearColor(Item->Quality), true);
+			Button->SetToolTipText(Database->GetItemTooltip(*Item)); // 호버 상세 (UI 2차 — 엔진 기본 툴팁)
 		}
 		else
 		{
@@ -142,9 +143,10 @@ void UROHInventoryWindow::RefreshContents()
 		const FString Label = FString::Printf(TEXT("%d: %s%s"), ItemIndex,
 			*Database->GetItemDisplayName(Items[ItemIndex]).ToString(),
 			*SocketSummary(*Database, Items[ItemIndex]));
-		// 룬/재료는 표시만 (콘솔 ROHSocket/ROHTransmute — UI 2차)
-		MakeActionButton(ItemColumn, Label, TEXT("Item"), ItemIndex,
+		// 룬/재료는 표시만 (소켓/합성은 콘솔 ROHSocket/ROHTransmute)
+		UROHActionButton* Button = MakeActionButton(ItemColumn, Label, TEXT("Item"), ItemIndex,
 			QualityLinearColor(Items[ItemIndex].Quality), bClickable);
+		Button->SetToolTipText(Database->GetItemTooltip(Items[ItemIndex])); // 호버 상세 (UI 2차)
 	}
 	if (Items.Num() == 0)
 	{

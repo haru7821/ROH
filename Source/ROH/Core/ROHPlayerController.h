@@ -18,7 +18,8 @@ enum class EROHUiWindowKind : uint8
 	Inventory,
 	SkillTree,
 	Vendor,
-	Stash
+	Stash,
+	Paragon // UI 2차 (P 키) — append-only: 기존 값 순서 변경 금지
 };
 
 /**
@@ -48,6 +49,12 @@ public:
 	/** 계정 보관함 창 열기 (M5 최종 — 토글 의미 유지) */
 	void OpenStashWindow() { ToggleUiWindow(EROHUiWindowKind::Stash); }
 
+	/**
+	 * UI 창 열림 여부 (UI 2차): 열려 있는 동안 이동/공격/스킬 게임 입력을 차단한다
+	 * (창 토글 키 E·I·K·P는 차단하지 않음 — 창 전환/닫기 용도 유지).
+	 */
+	bool IsUiWindowOpen() const { return CurrentWindow != nullptr; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
@@ -64,6 +71,7 @@ protected:
 	void OnInteract();
 	void OnToggleInventory();
 	void OnToggleSkillTree();
+	void OnToggleParagon();
 	void ActivateSlot(int32 SlotIndex);
 
 	/**
@@ -101,12 +109,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> InteractAction;
 
-	/** UI 창 토글 (I 인벤토리 / K 스킬트리) */
+	/** UI 창 토글 (I 인벤토리 / K 스킬트리 / P 정복자) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> InventoryAction;
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
 	TObjectPtr<UInputAction> SkillTreeAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")
+	TObjectPtr<UInputAction> ParagonAction;
 
 	/** 이 시간(초) 이하로 누르면 클릭 이동, 넘으면 홀드 이동으로 판정 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Input")

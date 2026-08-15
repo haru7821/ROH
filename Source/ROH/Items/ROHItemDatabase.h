@@ -5,6 +5,42 @@
 #include "Items/ROHItemTypes.h"
 #include "ROHItemDatabase.generated.h"
 
+/** 장착 보정 한 줄 (코드 전용 — 장착 GE/툴팁 공용 해석 결과) */
+struct FROHResolvedBonus
+{
+	FGameplayAttribute Attribute;
+	float Value = 0.f;
+};
+
+/**
+ * 아이템의 장착 보정 해석 결과 (UI 2차): 출처별로 구분해 툴팁 섹션 표시에 쓰고,
+ * 장착 GE 빌드(UROHInventoryComponent::ApplyEquipEffect)는 전 배열을 그대로 모디파이어로 올린다.
+ * 수치의 단일 소스 — 여기 밖에서 고대 ×1.5/룬 위력 합산을 재계산하지 말 것.
+ */
+struct FROHResolvedEquipBonuses
+{
+	/** 베이스 성능 (무기 피해 평균 → AttackPower, 방어구 → Defense) */
+	TArray<FROHResolvedBonus> BaseBonuses;
+
+	/** 접사 (라이브 해석 — Item.Affixes와 같은 순서/개수, 무효 어트리뷰트도 자리 유지) */
+	TArray<FROHResolvedBonus> AffixBonuses;
+
+	/** 소켓 룬 보너스 (DB 미등록 룬은 제외 — GE와 동일 규칙) */
+	TArray<FROHResolvedBonus> RuneBonuses;
+
+	/** 완성 룬워드 보너스 */
+	TArray<FROHResolvedBonus> RunewordBonuses;
+
+	/** 세트 피스 자체 옵션 (조합 보너스는 RefreshSetBonuses의 별도 GE) */
+	TArray<FROHResolvedBonus> SetPieceBonuses;
+
+	/** 유니크/고대 고정 옵션 (고대 ×1.5 반영치) */
+	TArray<FROHResolvedBonus> UniqueBonuses;
+
+	/** 총 룬 위력: 룬 + 룬워드 + 유니크 (+고대 +3) 합산 */
+	float TotalRunePower = 0.f;
+};
+
 /**
  * 아이템/접사/트레저클래스 데이터 저장소 + 생성기 (docs/03 §3.2).
  * M2: 기본 데이터를 C++로 등록. 추후 DataTable 애셋이 있으면 그것으로 대체 가능한 구조.
@@ -67,6 +103,25 @@ public:
 
 	/** 아이템 표시명 (등급 반영: "강철의 단검" 등) */
 	FText GetItemDisplayName(const FROHItemInstance& Instance) const;
+
+	/**
+	 * 장착 보정 해석 (UI 2차 — 장착 GE/툴팁의 단일 소스): 베이스 성능 + 접사 + 소켓 룬 +
+	 * 룬워드 + 세트 피스 자체 옵션 + 유니크/고대(옵션 ×1.5, 룬 위력 +3)를 출처별로 반환.
+	 */
+	FROHResolvedEquipBonuses ResolveEquipBonuses(const FROHItemInstance& Item) const;
+
+	/**
+	 * 아이템 툴팁 (UI 2차 — 호버 상세, 멀티라인): 이름/등급/종류/기본 성능/접사/소켓 룬/
+	 * 룬워드/유니크·세트 옵션/골드 가치. 미감정은 "감정 필요"만 표시하고 옵션 숨김.
+	 * 수치는 ResolveEquipBonuses 공용 해석 — 장착 GE와 항상 일치.
+	 */
+	FText GetItemTooltip(const FROHItemInstance& Item) const;
+
+	/** 어트리뷰트 보정 표기 ("공격력 +5", "치명타 확률 +3%") — 툴팁/정복자 창 공용 */
+	static FString FormatAttributeBonus(const FGameplayAttribute& Attribute, float Value);
+
+	/** 등급 한글명 (툴팁: 일반/마법/레어/유니크/룬워드/고대/세트) */
+	static const TCHAR* GetQualityLabel(EROHItemQuality Quality);
 
 	/** 세이브 로드 후 접사 Attribute 참조를 DB 기준으로 재해석 (경로 직렬화 의존 제거 — 캐릭터/계정 세이브 공용) */
 	void RefreshItemAffixes(FROHItemInstance& Item) const;

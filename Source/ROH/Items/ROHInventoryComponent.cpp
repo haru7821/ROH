@@ -140,7 +140,7 @@ void UROHInventoryComponent::ApplyEquipEffect(EROHEquipSlot Slot, const FROHItem
 		return;
 	}
 
-	// 런타임 GE 구성: 베이스 성능 + 접사 전부 Additive 모디파이어로
+	// 런타임 GE 구성: 수치는 DB의 공용 해석(ResolveEquipBonuses)이 단일 소스 — 툴팁과 항상 일치 (UI 2차)
 	// (이름은 자동 유니크 — 고정 이름은 동명 객체를 in-place 교체해 활성 GE를 파괴할 위험)
 	UGameplayEffect* EquipEffect = NewObject<UGameplayEffect>(GetTransientPackage());
 	EquipEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
@@ -157,70 +157,25 @@ void UROHInventoryComponent::ApplyEquipEffect(EROHEquipSlot Slot, const FROHItem
 		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Value));
 		EquipEffect->Modifiers.Add(Modifier);
 	};
+	auto AddAll = [&AddModifier](const TArray<FROHResolvedBonus>& Bonuses)
+	{
+		for (const FROHResolvedBonus& Bonus : Bonuses)
+		{
+			AddModifier(Bonus.Attribute, Bonus.Value);
+		}
+	};
 
-	if (Base->DamageMax > 0.f)
-	{
-		AddModifier(UROHAttributeSet::GetAttackPowerAttribute(), (Base->DamageMin + Base->DamageMax) * 0.5f);
-	}
-	if (Base->Armor > 0.f)
-	{
-		AddModifier(UROHAttributeSet::GetDefenseAttribute(), Base->Armor);
-	}
-	for (const FROHAffixRoll& Affix : Item.Affixes)
-	{
-		AddModifier(Affix.Attribute, Affix.Value);
-	}
-
-	// 소켓 룬/룬워드 (M5): 세이브엔 ID만 저장 — 보너스는 항상 DB에서 해석 (로드 갱신 불필요)
-	float TotalRunePower = 0.f;
-	for (const FName& RuneId : Item.SocketedRunes)
-	{
-		if (const FROHRuneDef* Rune = Database->FindRune(RuneId))
-		{
-			AddModifier(Rune->BonusAttribute, Rune->BonusValue);
-			TotalRunePower += Rune->RunePower;
-		}
-	}
-	if (!Item.RunewordId.IsNone())
-	{
-		if (const FROHRunewordDef* Runeword = Database->FindRuneword(Item.RunewordId))
-		{
-			for (const FROHRunewordBonus& Bonus : Runeword->Bonuses)
-			{
-				AddModifier(Bonus.Attribute, Bonus.Value);
-			}
-			TotalRunePower += Runeword->RunePower;
-		}
-	}
-	// 세트 피스 자체 옵션 (M5 2차) — 조합 보너스는 RefreshSetBonuses의 별도 GE가 담당
-	if (!Item.SetPieceId.IsNone())
-	{
-		if (const FROHSetPieceDef* Piece = Database->FindSetPiece(Item.SetPieceId))
-		{
-			for (const FROHRunewordBonus& Bonus : Piece->Bonuses)
-			{
-				AddModifier(Bonus.Attribute, Bonus.Value);
-			}
-		}
-	}
-
-	// 유니크/고대 (M5 2차): 고정 옵션 — 고대는 옵션 ×1.5 + 룬 위력 +3 (DB 실시간 해석)
-	if (!Item.UniqueId.IsNone())
-	{
-		if (const FROHUniqueDef* Unique = Database->FindUnique(Item.UniqueId))
-		{
-			const bool bAncient = (Item.Quality == EROHItemQuality::Ancient);
-			const float BonusMult = bAncient ? UROHItemDatabase::AncientBonusMult : 1.f;
-			for (const FROHRunewordBonus& Bonus : Unique->Bonuses)
-			{
-				AddModifier(Bonus.Attribute, Bonus.Value * BonusMult);
-			}
-			TotalRunePower += Unique->RunePower + (bAncient ? UROHItemDatabase::AncientRunePowerBonus : 0.f);
-		}
-	}
+	// 베이스 성능 + 접사 + 소켓 룬 + 룬워드 + 세트 피스 자체 옵션 + 유니크/고대(×1.5) — 전부 Additive
+	const FROHResolvedEquipBonuses Resolved = Database->ResolveEquipBonuses(Item);
+	AddAll(Resolved.BaseBonuses);
+	AddAll(Resolved.AffixBonuses);
+	AddAll(Resolved.RuneBonuses);
+	AddAll(Resolved.RunewordBonuses);
+	AddAll(Resolved.SetPieceBonuses);
+	AddAll(Resolved.UniqueBonuses);
 
 	// 룬 위력 → ×(1 + RunePower/100) 최종 피해 배율 합산원 (docs/10 §5.2)
-	AddModifier(UROHAttributeSet::GetRunePowerAttribute(), TotalRunePower);
+	AddModifier(UROHAttributeSet::GetRunePowerAttribute(), Resolved.TotalRunePower);
 
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	Context.AddSourceObject(this);

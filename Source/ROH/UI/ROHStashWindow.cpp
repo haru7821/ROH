@@ -76,10 +76,11 @@ void UROHStashWindow::RefreshContents()
 	const TArray<FROHItemInstance>& StashItems = Account->GetStashItems();
 	for (int32 StashIndex = 0; StashIndex < StashItems.Num(); ++StashIndex)
 	{
-		MakeActionButton(StashColumn, FString::Printf(TEXT("%s%s"),
+		UROHActionButton* Button = MakeActionButton(StashColumn, FString::Printf(TEXT("%s%s"),
 			*Database->GetItemDisplayName(StashItems[StashIndex]).ToString(),
 			*StashSocketSummary(*Database, StashItems[StashIndex])),
 			TEXT("Withdraw"), StashIndex, StashQualityColor(StashItems[StashIndex].Quality));
+		Button->SetToolTipText(Database->GetItemTooltip(StashItems[StashIndex])); // 호버 상세 (UI 2차)
 	}
 	if (StashItems.Num() == 0)
 	{
@@ -93,10 +94,11 @@ void UROHStashWindow::RefreshContents()
 	const TArray<FROHItemInstance>& Items = Inventory->GetItems();
 	for (int32 ItemIndex = 0; ItemIndex < Items.Num(); ++ItemIndex)
 	{
-		MakeActionButton(ItemColumn, FString::Printf(TEXT("%s%s"),
+		UROHActionButton* Button = MakeActionButton(ItemColumn, FString::Printf(TEXT("%s%s"),
 			*Database->GetItemDisplayName(Items[ItemIndex]).ToString(),
 			*StashSocketSummary(*Database, Items[ItemIndex])),
 			TEXT("Deposit"), ItemIndex, StashQualityColor(Items[ItemIndex].Quality));
+		Button->SetToolTipText(Database->GetItemTooltip(Items[ItemIndex])); // 호버 상세 (UI 2차)
 	}
 	if (Items.Num() == 0)
 	{
