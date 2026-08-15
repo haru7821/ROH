@@ -162,6 +162,42 @@ public:
 	FGameplayAttributeData MoveSpeed;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MoveSpeed)
 
+	// --- % 배율 (docs/10 §1 3단 구조 — b29. 합산식: 10% + 10% = 20%) ---
+	/** 최대 생명력 % 증가 — HPmax = (베이스+Flat) × (1 + HealthPct/100). CharacterBase가 무한 GE로 반영 */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData HealthPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, HealthPct)
+
+	/** 최대 마나 % 증가 (docs/10 §2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData ManaPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ManaPct)
+
+	/** 생명력 재생 % 증가 — Tick 재생 공식에서 (VIT×0.05 + Flat)에 곱해진다 (docs/10 §2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData HealthRegenPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, HealthRegenPct)
+
+	/** 마나 재생 % 증가 (docs/10 §2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData ManaRegenPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ManaRegenPct)
+
+	/** 물리 피해 % 증가 — FinalAP 배율 합산원 (docs/10 §3.1, 파이프라인 적용) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData PhysicalDamagePct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, PhysicalDamagePct)
+
+	/** 원소(화염/냉기/번개/독/그림자) 피해 % 증가 — FinalSP 배율 합산원 (docs/10 §3.1) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData ElementalDamagePct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ElementalDamagePct)
+
+	/** 모든 피해 % 증가 — AP/SP 공통 곱연산 항 (docs/10 §3.1 Global%Inc) */
+	UPROPERTY(BlueprintReadOnly, Category = "Percent")
+	FGameplayAttributeData GlobalDamagePct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, GlobalDamagePct)
+
 	// --- 메타 (저장/표시되지 않는 계산용) ---
 	UPROPERTY(BlueprintReadOnly, Category = "Meta")
 	FGameplayAttributeData IncomingDamage;

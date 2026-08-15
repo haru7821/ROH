@@ -53,10 +53,10 @@ void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 
 	if (BestTarget)
 	{
-		const float Strength = Character->GetAttributeSet()->GetStrength();
+		// 힘/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 		const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 		FROHDamageParams Damage;
-		Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f) * GetSkillDamageMultiplier();
+		Damage.PhysicalDamage = (BaseDamage + AttackPower) * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = true;
 
 		if (UROHCombatStatics::ApplyDamage(Character, BestTarget, Damage))

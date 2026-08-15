@@ -45,6 +45,13 @@ struct FROHDamageParams
 	/** true면 명중 굴림(AR vs Defense) 적용. 근접/원거리 '공격'은 true, 주문은 false (디아블로2 방식) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	bool bUseAttackRoll = true;
+
+	/**
+	 * AP/SP 스탯·% 배율(docs/10 §3.1 — b29) 적용 여부.
+	 * %생명력 비례 피해(정전기장) 등 스탯 무관 피해는 false — 종전(스탯 미적용) 동작 유지.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+	bool bApplyStatScaling = true;
 };
 
 /**
@@ -61,7 +68,7 @@ public:
 	/**
 	 * Source가 Target에게 피해를 가한다 (docs/10 §5 파이프라인). 명중 실패 시에만 false.
 	 * 명중(§3.3): 2*AR/(AR+DEF) * alvl/(alvl+dlvl), 5%~95% 클램프
-	 * 치명타(§3.2) → 원소 저항/PDR(§4.2~4.3) → 산포 → 치명 배율 → 룬 배율(§5.2)
+	 * 치명타(§3.2) → AP/SP 스탯·% 배율(§3.1 — b29) → 원소 저항/PDR(§4.2~4.3) → 산포 → 치명 배율 → 룬 배율(§5.2)
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ROH|Combat")
 	static bool ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase* Target, const FROHDamageParams& Params);

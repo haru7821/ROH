@@ -64,10 +64,9 @@ void UROHAbility_MagicBolt::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		const FVector Aim = GetCursorLocation();
 		FaceLocation(Aim);
 
-		// 주문 피해 = 기본 피해 × (1 + 에너지 × 1%) — 명중 굴림 없음 (주문)
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 원피해 = 기본 피해 — 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관). 명중 굴림 없음 (주문)
 		FROHDamageParams Damage;
-		Damage.LightningDamage = BaseDamage * (1.f + Energy * 0.01f);
+		Damage.LightningDamage = BaseDamage;
 		Damage.bUseAttackRoll = false;
 
 		SpawnProjectileTowardCursor(Caster, Aim, Damage, ProjectileSpeed, 0.f);
@@ -108,9 +107,9 @@ void UROHAbility_Fireball::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		const FVector Aim = GetCursorLocation();
 		FaceLocation(Aim);
 
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 		FROHDamageParams Damage;
-		Damage.FireDamage = BaseDamage * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
+		Damage.FireDamage = BaseDamage * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
 		SpawnProjectileTowardCursor(Caster, Aim, Damage, ProjectileSpeed, ExplosionRadius);
@@ -149,9 +148,9 @@ void UROHAbility_FrostNova::ActivateAbility(const FGameplayAbilitySpecHandle Han
 	{
 		DebugDrawSwing(Caster->GetActorLocation(), Radius);
 
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 		FROHDamageParams Damage;
-		Damage.ColdDamage = BaseDamage * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
+		Damage.ColdDamage = BaseDamage * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
 		for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInRadius(Caster, Caster->GetActorLocation(), Radius))
@@ -258,9 +257,9 @@ void UROHAbility_IceBolt::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 		const FVector Aim = GetCursorLocation();
 		FaceLocation(Aim);
 
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 		FROHDamageParams Damage;
-		Damage.ColdDamage = BaseDamage * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
+		Damage.ColdDamage = BaseDamage * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
 		SpawnProjectileTowardCursor(Caster, Aim, Damage, ProjectileSpeed, 0.f);
@@ -301,9 +300,9 @@ void UROHAbility_Meteor::ActivateAbility(const FGameplayAbilitySpecHandle Handle
 		const FVector Target = GetCursorLocation();
 		FaceLocation(Target);
 
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관 — 타격 시점의 스탯으로 계산)
 		FROHDamageParams Damage;
-		Damage.FireDamage = BaseDamage * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
+		Damage.FireDamage = BaseDamage * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
 		// 낙하 예고 표시 후 지연 폭발 (어빌리티는 즉시 종료 — 시전자 소멸 시 타이머는 무시된다)
@@ -364,9 +363,9 @@ void UROHAbility_Blizzard::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		const FVector Target = GetCursorLocation();
 		FaceLocation(Target);
 
-		const float Energy = Caster->GetAttributeSet()->GetEnergy();
+		// 에너지/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관 — 파동 시점의 스탯으로 계산)
 		FROHDamageParams Damage;
-		Damage.ColdDamage = DamagePerPulse * (1.f + Energy * 0.01f) * GetSkillDamageMultiplier();
+		Damage.ColdDamage = DamagePerPulse * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = false;
 
 		// 폭풍 범위 예고
@@ -453,6 +452,8 @@ void UROHAbility_StaticField::ActivateAbility(const FGameplayAbilitySpecHandle H
 			FROHDamageParams Damage;
 			Damage.LightningDamage = VictimAttributes->GetHealth() * HealthPercent;
 			Damage.bUseAttackRoll = false;
+			// %생명력 비례 피해 — AP/SP 스탯·% 배율 미적용 (종전 동작 유지, docs/10 §3.1 예외 — b29)
+			Damage.bApplyStatScaling = false;
 			if (Damage.LightningDamage > 0.f && UROHCombatStatics::ApplyDamage(Caster, Victim, Damage))
 			{
 				PlayHitFeedback(Victim);

@@ -30,11 +30,10 @@ void UROHAbility_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle H
 	FaceLocation(GetCursorLocation());
 	DebugDrawSwing(Character->GetActorLocation() + Character->GetActorForwardVector() * Range * 0.5f, Range * 0.5f);
 
-	// 물리 피해 = (기본 피해 + 무기 공격력) × (1 + 힘 × 1%)
-	const float Strength = Character->GetAttributeSet()->GetStrength();
+	// 원피해 = 기본 피해 + 무기 공격력(FlatAP) — 힘/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 	const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 	FROHDamageParams Damage;
-	Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f);
+	Damage.PhysicalDamage = BaseDamage + AttackPower;
 	Damage.bUseAttackRoll = true;
 
 	int32 HitCount = 0;

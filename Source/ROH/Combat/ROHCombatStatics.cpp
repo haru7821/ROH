@@ -47,8 +47,8 @@ bool UROHCombatStatics::ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase
 	}
 
 	// ---- 최종 피해 파이프라인 (docs/10 §5.3) ----
-	// 명중 굴림 → 치명타 굴림 → 유형별 감쇄(원소 저항 §4.2 / PDR §4.3)
-	// → 산포(0.95~1.05) → 치명 배율 → 룬 배율(§5.2) → GE 적용
+	// 명중 굴림 → 치명타 굴림 → AP/SP 스탯·% 배율(§3.1 — 원피해 산정) →
+	// 유형별 감쇄(원소 저항 §4.2 / PDR §4.3) → 산포(0.95~1.05) → 치명 배율 → 룬 배율(§5.2) → GE 적용
 
 	// 1) 명중 굴림 (공격만, 주문은 항상 명중 — §3.3, 기존 공식 유지)
 	if (Params.bUseAttackRoll)
@@ -78,7 +78,24 @@ bool UROHCombatStatics::ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase
 	const bool bCrit = FMath::FRand() * 100.f < CritChancePct;
 	const float CritMult = bCrit ? GetAttr(SourceASC, UROHAttributeSet::GetCritDamageAttribute()) / 100.f : 1.f;
 
-	// 3) 유형별 감쇄 후 합산 — Energy가 문서의 INT 역할을 승계 (docs/10 서두)
+	// 3) AP/SP 스탯·% 배율 (docs/10 §3.1 완전형 — b29): 저항 적용 전 원피해 산정 단계.
+	//    FinalAP = Raw물리 × (1 + STR/100 + 물리%/100) × (1 + 전체%/100)
+	//    FinalSP = Raw원소 × (1 + INT(Energy)/100 + 원소%/100) × (1 + 전체%/100)
+	//    종전에는 각 어빌리티가 (1+STR/100)/(1+INT/100)을 자체 적용 — b29에서 파이프라인으로 이관
+	//    (이중 적용 금지: 어빌리티 쪽 스탯 항 전부 제거됨). 몬스터는 STR/Energy 0이라 배율 1.0 유지.
+	//    %생명력 피해(정전기장)는 bApplyStatScaling=false — 종전(스탯 미적용) 동작 그대로.
+	float ApMult = 1.f;
+	float SpMult = 1.f;
+	if (Params.bApplyStatScaling)
+	{
+		const float GlobalMult = 1.f + GetAttr(SourceASC, UROHAttributeSet::GetGlobalDamagePctAttribute()) / 100.f;
+		ApMult = FMath::Max(0.f, (1.f + GetAttr(SourceASC, UROHAttributeSet::GetStrengthAttribute()) / 100.f
+			+ GetAttr(SourceASC, UROHAttributeSet::GetPhysicalDamagePctAttribute()) / 100.f) * GlobalMult);
+		SpMult = FMath::Max(0.f, (1.f + GetAttr(SourceASC, UROHAttributeSet::GetEnergyAttribute()) / 100.f
+			+ GetAttr(SourceASC, UROHAttributeSet::GetElementalDamagePctAttribute()) / 100.f) * GlobalMult);
+	}
+
+	// 4) 유형별 감쇄 후 합산 — Energy가 문서의 INT 역할을 승계 (docs/10 서두)
 	const float TargetEnergy = GetAttr(TargetASC, UROHAttributeSet::GetEnergyAttribute());
 	float TotalDamage = 0.f;
 
@@ -88,15 +105,15 @@ bool UROHCombatStatics::ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase
 		const float PDR = FMath::Clamp(
 			GetAttr(TargetASC, UROHAttributeSet::GetPhysicalResistanceAttribute())
 			+ GetAttr(TargetASC, UROHAttributeSet::GetVitalityAttribute()) / 100.f, 0.f, 90.f);
-		TotalDamage += Params.PhysicalDamage * (1.f - PDR / 100.f);
+		TotalDamage += Params.PhysicalDamage * ApMult * (1.f - PDR / 100.f);
 	}
-	TotalDamage += MitigateElemental(Params.FireDamage, GetAttr(TargetASC, UROHAttributeSet::GetFireResistanceAttribute()), TargetEnergy);
-	TotalDamage += MitigateElemental(Params.ColdDamage, GetAttr(TargetASC, UROHAttributeSet::GetColdResistanceAttribute()), TargetEnergy);
-	TotalDamage += MitigateElemental(Params.LightningDamage, GetAttr(TargetASC, UROHAttributeSet::GetLightningResistanceAttribute()), TargetEnergy);
-	TotalDamage += MitigateElemental(Params.PoisonDamage, GetAttr(TargetASC, UROHAttributeSet::GetPoisonResistanceAttribute()), TargetEnergy);
-	TotalDamage += MitigateElemental(Params.ShadowDamage, GetAttr(TargetASC, UROHAttributeSet::GetShadowResistanceAttribute()), TargetEnergy);
+	TotalDamage += MitigateElemental(Params.FireDamage * SpMult, GetAttr(TargetASC, UROHAttributeSet::GetFireResistanceAttribute()), TargetEnergy);
+	TotalDamage += MitigateElemental(Params.ColdDamage * SpMult, GetAttr(TargetASC, UROHAttributeSet::GetColdResistanceAttribute()), TargetEnergy);
+	TotalDamage += MitigateElemental(Params.LightningDamage * SpMult, GetAttr(TargetASC, UROHAttributeSet::GetLightningResistanceAttribute()), TargetEnergy);
+	TotalDamage += MitigateElemental(Params.PoisonDamage * SpMult, GetAttr(TargetASC, UROHAttributeSet::GetPoisonResistanceAttribute()), TargetEnergy);
+	TotalDamage += MitigateElemental(Params.ShadowDamage * SpMult, GetAttr(TargetASC, UROHAttributeSet::GetShadowResistanceAttribute()), TargetEnergy);
 
-	// 4) 산포 → 5) 치명 배율 → 6) 룬 배율 (음수 룬 없음 — 하한 0)
+	// 5) 산포 → 6) 치명 배율 → 7) 룬 배율 (음수 룬 없음 — 하한 0)
 	TotalDamage *= FMath::FRandRange(0.95f, 1.05f);
 	TotalDamage *= CritMult;
 	TotalDamage *= 1.f + FMath::Max(0.f, GetAttr(SourceASC, UROHAttributeSet::GetRunePowerAttribute())) / 100.f;
@@ -110,7 +127,7 @@ bool UROHCombatStatics::ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase
 			*Source->GetName(), *Target->GetName(), CritMult, TotalDamage);
 	}
 
-	// 7) 피해 GE 적용 (IncomingDamage → AttributeSet에서 Health 반영)
+	// 8) 피해 GE 적용 (IncomingDamage → AttributeSet에서 Health 반영)
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddSourceObject(Source);
 

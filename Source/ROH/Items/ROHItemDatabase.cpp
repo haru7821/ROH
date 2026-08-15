@@ -48,6 +48,14 @@ namespace
 			{ UROHAttributeSet::GetPoisonResistanceAttribute(),    TEXT("독 저항"),         true },
 			{ UROHAttributeSet::GetShadowResistanceAttribute(),    TEXT("그림자 저항"),     true },
 			{ UROHAttributeSet::GetMoveSpeedAttribute(),           TEXT("이동 속도"),       false },
+			// % 배율 7종 (docs/10 §1/§3.1 — b29): 동명 Flat과는 % 접미로 구분 (예: "최대 생명력 +30" vs "+8%")
+			{ UROHAttributeSet::GetHealthPctAttribute(),           TEXT("최대 생명력"),     true },
+			{ UROHAttributeSet::GetManaPctAttribute(),             TEXT("최대 마나"),       true },
+			{ UROHAttributeSet::GetHealthRegenPctAttribute(),      TEXT("생명력 재생"),     true },
+			{ UROHAttributeSet::GetManaRegenPctAttribute(),        TEXT("마나 재생"),       true },
+			{ UROHAttributeSet::GetPhysicalDamagePctAttribute(),   TEXT("물리 피해"),       true },
+			{ UROHAttributeSet::GetElementalDamagePctAttribute(),  TEXT("원소 피해"),       true },
+			{ UROHAttributeSet::GetGlobalDamagePctAttribute(),     TEXT("모든 피해"),       true },
 		};
 		for (const FAttributeLabelEntry& Entry : Entries)
 		{
@@ -277,10 +285,12 @@ void UROHItemDatabase::BuildDefaultData()
 		  RB(UROHAttributeSet::GetLightningResistanceAttribute(), 10.f) }, 0.f);
 
 	// 상급 (ilvl 12+) — 타락 직전의 마지막 성인들 (룬 위력 부여)
+	// b29: 상위 티어 일부에 % 옵션 소량 부여 (docs/10 §1 체감용 — 옵션 배열 append만, ID/구조 불변)
 	AddUnique("StRakhom", TEXT("성 라콤의 분노"),     "BattleAxe",    12,
 		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 25.f),
 		  RB(UROHAttributeSet::GetCritChanceAttribute(), 6.f),
-		  RB(UROHAttributeSet::GetCritDamageAttribute(), 50.f) }, 8.f);
+		  RB(UROHAttributeSet::GetCritDamageAttribute(), 50.f),
+		  RB(UROHAttributeSet::GetPhysicalDamagePctAttribute(), 10.f) }, 8.f); // b29 % 옵션
 	AddUnique("StElara",  TEXT("성 엘라라의 성벽"),   "RoundShield",  12,
 		{ RB(UROHAttributeSet::GetDefenseAttribute(), 50.f),
 		  RB(UROHAttributeSet::GetMaxHealthAttribute(), 50.f),
@@ -288,11 +298,13 @@ void UROHItemDatabase::BuildDefaultData()
 	AddUnique("StNoctis", TEXT("성 녹티스의 면갑"),   "FullHelm",     12,
 		{ RB(UROHAttributeSet::GetMaxManaAttribute(), 40.f),
 		  RB(UROHAttributeSet::GetCritChanceAttribute(), 4.f),
-		  RB(UROHAttributeSet::GetMagicFindAttribute(), 25.f) }, 4.f);
+		  RB(UROHAttributeSet::GetMagicFindAttribute(), 25.f),
+		  RB(UROHAttributeSet::GetElementalDamagePctAttribute(), 8.f) }, 4.f); // b29 % 옵션
 	AddUnique("StSerin",  TEXT("성 세린의 갑주"),     "ChainMail",    12,
 		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 80.f),
 		  RB(UROHAttributeSet::GetDefenseAttribute(), 40.f),
-		  RB(UROHAttributeSet::GetHealthRegenAttribute(), 4.f) }, 5.f);
+		  RB(UROHAttributeSet::GetHealthRegenAttribute(), 4.f),
+		  RB(UROHAttributeSet::GetHealthPctAttribute(), 8.f) }, 5.f); // b29 % 옵션
 	AddUnique("StAvelo",  TEXT("성 아벨로의 낙인"),   "ShortSword",   12,
 		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 20.f),
 		  RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 15.f),
@@ -372,7 +384,8 @@ void UROHItemDatabase::BuildDefaultData()
 			RB(UROHAttributeSet::GetDefenseAttribute(), 40.f) });
 		Remains.CountBonuses.Add(5, { RB(UROHAttributeSet::GetCritChanceAttribute(), 5.f),
 			RB(UROHAttributeSet::GetCritDamageAttribute(), 30.f),
-			RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 10.f) });
+			RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 10.f),
+			RB(UROHAttributeSet::GetGlobalDamagePctAttribute(), 5.f) }); // b29 % 옵션 (풀세트 전용)
 		Remains.FullSetRunePower = 10.f;
 		Sets.Add(Remains);
 	}
@@ -392,6 +405,7 @@ void UROHItemDatabase::BuildDefaultData()
 			RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 10.f) });
 		Altar.CountBonuses.Add(3, { RB(UROHAttributeSet::GetEnergyAttribute(), 10.f),
 			RB(UROHAttributeSet::GetManaRegenAttribute(), 2.f),
+			RB(UROHAttributeSet::GetElementalDamagePctAttribute(), 8.f), // b29 % 옵션 (풀세트 전용)
 			RB(UROHAttributeSet::GetFireResistanceAttribute(), 8.f),
 			RB(UROHAttributeSet::GetColdResistanceAttribute(), 8.f),
 			RB(UROHAttributeSet::GetLightningResistanceAttribute(), 8.f),
@@ -444,6 +458,14 @@ void UROHItemDatabase::BuildDefaultData()
 	AddAffix("OfRecovery",  TEXT("회복의"),   false, UROHAttributeSet::GetHealthRegenAttribute(), 1.f, 3.f, 2, {});
 	AddAffix("OfClarity",   TEXT("명상의"),   false, UROHAttributeSet::GetManaRegenAttribute(), 1.f, 3.f, 2, {});
 	AddAffix("OfHaste",     TEXT("신속의"),   false, UROHAttributeSet::GetMoveSpeedAttribute(), 20.f, 60.f, 4, { EROHEquipSlot::Boots });
+
+	// % 배율 접사 (docs/10 §1/§3.1 — b29): 합산식 % 어트리뷰트 공급원.
+	// 전체 피해 %는 고 ilvl 전용 희귀 접사 (룬각인 OfRunes보다 상위 게이트)
+	AddAffix("Savage",      TEXT("흉포한"),   true,  UROHAttributeSet::GetPhysicalDamagePctAttribute(), 5.f, 15.f, 8, { EROHEquipSlot::Weapon });
+	AddAffix("Arcane",      TEXT("비전의"),   true,  UROHAttributeSet::GetElementalDamagePctAttribute(), 5.f, 15.f, 8, { EROHEquipSlot::Weapon });
+	AddAffix("OfVigor",     TEXT("생기의"),   false, UROHAttributeSet::GetHealthPctAttribute(), 3.f, 10.f, 4, {});
+	AddAffix("OfSpirit",    TEXT("정기의"),   false, UROHAttributeSet::GetManaPctAttribute(), 3.f, 10.f, 4, {});
+	AddAffix("OfAnnihilation", TEXT("절멸의"), false, UROHAttributeSet::GetGlobalDamagePctAttribute(), 3.f, 8.f, 12, {});
 
 	// ---------- 트레저 클래스 ----------
 	auto MakeEntry = [](EROHTreasureEntryType Type, FName Ref, int32 Weight, int32 GoldMin = 5, int32 GoldMax = 25)

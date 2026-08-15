@@ -25,6 +25,13 @@ AROHMonsterCharacter::AROHMonsterCharacter()
 
 	BaseMaxHealth = 80.f;
 	BaseMoveSpeed = 400.f;
+
+	// b29 AP/SP 파이프라인 배율 대응: 몬스터 오펜스 스탯은 0 — (1 + STR/100)/(1 + INT/100) = 1.0으로
+	// AttackDamage 튜닝값이 종전 그대로 최종 피해가 된다 (docs/10 §3.1).
+	// 부수 효과(보고됨): 원소 저항의 Energy×0.1 항 -1%p, MaxMana 40→20 (몬스터는 마나 미사용).
+	// VIT/DEX는 유지 — HP(+VIT×5)/명중/방어/치명 종전 수치 보존.
+	BaseStrength = 0.f;
+	BaseEnergy = 0.f;
 }
 
 void AROHMonsterCharacter::PossessedBy(AController* NewController)

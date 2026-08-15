@@ -33,6 +33,13 @@ UROHAttributeSet::UROHAttributeSet()
 	InitPoisonResistance(0.f);
 	InitShadowResistance(0.f);
 	InitMoveSpeed(600.f);
+	InitHealthPct(0.f);
+	InitManaPct(0.f);
+	InitHealthRegenPct(0.f);
+	InitManaRegenPct(0.f);
+	InitPhysicalDamagePct(0.f);
+	InitElementalDamagePct(0.f);
+	InitGlobalDamagePct(0.f);
 	InitIncomingDamage(0.f);
 }
 

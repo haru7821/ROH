@@ -84,10 +84,10 @@ void UROHAbility_LeapAttack::DoImpact()
 	{
 		DebugDrawSwing(Character->GetActorLocation(), ImpactRadius);
 
-		const float Strength = Character->GetAttributeSet()->GetStrength();
+		// 힘/% 배율은 파이프라인이 적용 (docs/10 §3.1, b29 이관)
 		const float AttackPower = Character->GetAttributeSet()->GetAttackPower();
 		FROHDamageParams Damage;
-		Damage.PhysicalDamage = (BaseDamage + AttackPower) * (1.f + Strength * 0.01f) * GetSkillDamageMultiplier();
+		Damage.PhysicalDamage = (BaseDamage + AttackPower) * GetSkillDamageMultiplier();
 		Damage.bUseAttackRoll = true;
 
 		for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInRadius(Character, Character->GetActorLocation(), ImpactRadius))

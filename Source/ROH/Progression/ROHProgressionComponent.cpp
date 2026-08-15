@@ -2,9 +2,26 @@
 #include "Character/ROHCharacterBase.h"
 #include "Character/ROHAttributeSet.h"
 #include "Save/ROHAccountSubsystem.h"
+#include "AbilitySystemComponent.h" // SetNumericAttributeBase / GetNumericAttributeBase
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
 #include "ROH.h"
+
+namespace
+{
+	/**
+	 * 성장/분배는 반드시 BaseValue 기준으로 가감한다 (Sup b29 지적).
+	 * Set(Get()+Δ)는 CurrentValue(장비 Flat·% 배율 GE 적용 후)를 Base에 되써서
+	 * 장비 보정이 베이스에 눌어붙고, % 배율 GE가 걸려 있으면 레벨업마다 지수로 불어난다.
+	 */
+	void ProgressionAddToBase(UROHAttributeSet* Attributes, const FGameplayAttribute& Attribute, float Delta)
+	{
+		if (UAbilitySystemComponent* ASC = Attributes ? Attributes->GetOwningAbilitySystemComponent() : nullptr)
+		{
+			ASC->SetNumericAttributeBase(Attribute, ASC->GetNumericAttributeBase(Attribute) + Delta);
+		}
+	}
+}
 
 UROHAttributeSet* UROHProgressionComponent::GetAttributeSet() const
 {
@@ -69,8 +86,8 @@ void UROHProgressionComponent::LevelUp()
 		// 레벨당 HP/MP 성장 (docs/10 §2 — 클래스 프리셋 HealthPerLevel/ManaPerLevel)
 		if (const AROHCharacterBase* OwnerCharacter = Cast<AROHCharacterBase>(GetOwner()))
 		{
-			Attributes->SetMaxHealth(Attributes->GetMaxHealth() + OwnerCharacter->GetHealthPerLevel());
-			Attributes->SetMaxMana(Attributes->GetMaxMana() + OwnerCharacter->GetManaPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxHealthAttribute(), OwnerCharacter->GetHealthPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxManaAttribute(), OwnerCharacter->GetManaPerLevel());
 		}
 
 		// 레벨업 보너스: 완전 회복
@@ -136,25 +153,25 @@ void UROHProgressionComponent::ApplyStatToAttributes(FName StatName, int32 Point
 	// 파생 공식은 docs/10 §2 / CharacterBase::InitializeAttributes와 일치시킬 것
 	if (StatName == TEXT("Strength"))
 	{
-		Attributes->SetStrength(Attributes->GetStrength() + Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetStrengthAttribute(), Delta);
 	}
 	else if (StatName == TEXT("Dexterity"))
 	{
-		Attributes->SetDexterity(Attributes->GetDexterity() + Delta);
-		Attributes->SetAttackRating(Attributes->GetAttackRating() + 5.f * Delta);
-		Attributes->SetDefense(Attributes->GetDefense() + 2.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetDexterityAttribute(), Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetAttackRatingAttribute(), 5.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetDefenseAttribute(), 2.f * Delta);
 	}
 	else if (StatName == TEXT("Vitality"))
 	{
-		Attributes->SetVitality(Attributes->GetVitality() + Delta);
-		Attributes->SetMaxHealth(Attributes->GetMaxHealth() + 5.f * Delta);
-		Attributes->SetHealth(Attributes->GetHealth() + 5.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetVitalityAttribute(), Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxHealthAttribute(), 5.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetHealthAttribute(), 5.f * Delta);
 	}
 	else if (StatName == TEXT("Energy"))
 	{
-		Attributes->SetEnergy(Attributes->GetEnergy() + Delta);
-		Attributes->SetMaxMana(Attributes->GetMaxMana() + 2.f * Delta);
-		Attributes->SetMana(Attributes->GetMana() + 2.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetEnergyAttribute(), Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxManaAttribute(), 2.f * Delta);
+		ProgressionAddToBase(Attributes, UROHAttributeSet::GetManaAttribute(), 2.f * Delta);
 	}
 }
 
@@ -175,10 +192,10 @@ void UROHProgressionComponent::RestoreState(int32 InLevel, int32 InXP, int32 InS
 		if (const AROHCharacterBase* OwnerCharacter = Cast<AROHCharacterBase>(GetOwner()))
 		{
 			const float LevelDelta = static_cast<float>(Level - 1);
-			Attributes->SetMaxHealth(Attributes->GetMaxHealth() + LevelDelta * OwnerCharacter->GetHealthPerLevel());
-			Attributes->SetHealth(Attributes->GetHealth() + LevelDelta * OwnerCharacter->GetHealthPerLevel());
-			Attributes->SetMaxMana(Attributes->GetMaxMana() + LevelDelta * OwnerCharacter->GetManaPerLevel());
-			Attributes->SetMana(Attributes->GetMana() + LevelDelta * OwnerCharacter->GetManaPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxHealthAttribute(), LevelDelta * OwnerCharacter->GetHealthPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetHealthAttribute(), LevelDelta * OwnerCharacter->GetHealthPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetMaxManaAttribute(), LevelDelta * OwnerCharacter->GetManaPerLevel());
+			ProgressionAddToBase(Attributes, UROHAttributeSet::GetManaAttribute(), LevelDelta * OwnerCharacter->GetManaPerLevel());
 		}
 	}
 	// 분배 내역 재적용 (InitializeAttributes 직후 호출 전제)

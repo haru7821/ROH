@@ -4,6 +4,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayAbilitySpecHandle.h"
+#include "GameplayEffectTypes.h" // FActiveGameplayEffectHandle (b29 % 배율 GE)
 #include "ROHCharacterBase.generated.h"
 
 class UROHAbilitySystemComponent;
@@ -65,6 +66,16 @@ protected:
 	/** MoveSpeed 어트리뷰트 변경을 CharacterMovement에 반영 */
 	void OnMoveSpeedChanged(const FOnAttributeChangeData& Data);
 
+	/** HealthPct/ManaPct 변경 → % 배율 GE 재적용 (b29 — docs/10 §1/§2) */
+	void OnVitalPercentChanged(const FOnAttributeChangeData& Data);
+
+	/**
+	 * 최대 HP/MP % 배율 반영 (docs/10 §2 완전형 — b29):
+	 * HPmax = (베이스 + Flat가산) × (1 + HealthPct/100) — MultiplyAdditive 무한 GE 1개로 적용.
+	 * % 가 전부 0이면 GE를 걸지 않는다 (기존 수치와 완전 동일 보장). 장비 착탈로 % 변경 시 재적용.
+	 */
+	void RefreshVitalPercentScaling();
+
 	UPROPERTY(VisibleAnywhere, Category = "ROH|Abilities")
 	TObjectPtr<UROHAbilitySystemComponent> AbilitySystemComponent;
 
@@ -118,6 +129,9 @@ protected:
 private:
 	bool bAbilitiesGranted = false;
 	bool bAttributeDelegatesBound = false;
+
+	/** % 배율 GE 핸들 (b29 — 재적용 시 제거용) */
+	FActiveGameplayEffectHandle VitalPctEffectHandle;
 
 	// 상태 표시용 몬스터 수 캐시 (0.25초 간격 갱신)
 	float MonsterCountTimer = 0.f;

@@ -4,6 +4,7 @@
 #include "Character/ROHAttributeSet.h"
 #include "Character/ROHMonsterCharacter.h"
 #include "ROHGameplayTags.h"
+#include "GameplayEffect.h" // b29 % 배율 무한 GE 구성
 #include "GameplayEffectTypes.h"
 #include "DrawDebugHelpers.h"
 #include "EngineUtils.h"
@@ -107,13 +108,14 @@ void AROHCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// 재생 (docs/10 §2.3, 초당): HP = VIT×0.05 + FlatRegen, MP = INT(Energy)×0.1 + FlatRegen
-	// 사망 후 재생 금지 — IsAlive 가드 필수 (시체의 Health는 0 < Max)
+	// 재생 (docs/10 §2 완전형 — b29, 초당): (VIT×0.05 + Flat) × (1 + %/100), MP는 INT(Energy)×0.1 기반
+	// % 가 0이면 ×1.0 — 기존 수치와 완전 동일. 사망 후 재생 금지 — IsAlive 가드 필수 (시체의 Health는 0 < Max)
 	if (IsAlive() && AttributeSet)
 	{
 		if (AttributeSet->GetHealth() < AttributeSet->GetMaxHealth())
 		{
-			const float HealthGain = (AttributeSet->GetVitality() * 0.05f + AttributeSet->GetHealthRegen()) * DeltaSeconds;
+			const float HealthGain = (AttributeSet->GetVitality() * 0.05f + AttributeSet->GetHealthRegen())
+				* (1.f + AttributeSet->GetHealthRegenPct() / 100.f) * DeltaSeconds;
 			if (HealthGain > 0.f)
 			{
 				AttributeSet->SetHealth(FMath::Min(AttributeSet->GetHealth() + HealthGain, AttributeSet->GetMaxHealth()));
@@ -121,7 +123,8 @@ void AROHCharacterBase::Tick(float DeltaSeconds)
 		}
 		if (AttributeSet->GetMana() < AttributeSet->GetMaxMana())
 		{
-			const float ManaGain = (AttributeSet->GetEnergy() * 0.1f + AttributeSet->GetManaRegen()) * DeltaSeconds;
+			const float ManaGain = (AttributeSet->GetEnergy() * 0.1f + AttributeSet->GetManaRegen())
+				* (1.f + AttributeSet->GetManaRegenPct() / 100.f) * DeltaSeconds;
 			if (ManaGain > 0.f)
 			{
 				AttributeSet->SetMana(FMath::Min(AttributeSet->GetMana() + ManaGain, AttributeSet->GetMaxMana()));
@@ -182,12 +185,74 @@ void AROHCharacterBase::InitAbilityActorInfo()
 		bAttributeDelegatesBound = true;
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UROHAttributeSet::GetMoveSpeedAttribute())
 			.AddUObject(this, &AROHCharacterBase::OnMoveSpeedChanged);
+		// % 배율 (b29): 장비 착탈 등으로 HealthPct/ManaPct가 바뀌면 배율 GE 재적용
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UROHAttributeSet::GetHealthPctAttribute())
+			.AddUObject(this, &AROHCharacterBase::OnVitalPercentChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UROHAttributeSet::GetManaPctAttribute())
+			.AddUObject(this, &AROHCharacterBase::OnVitalPercentChanged);
 	}
+
+	// 초기 반영 (% 전부 0이면 무동작 — 기존 수치 유지)
+	RefreshVitalPercentScaling();
 }
 
 void AROHCharacterBase::OnMoveSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	GetCharacterMovement()->MaxWalkSpeed = Data.NewValue;
+}
+
+void AROHCharacterBase::OnVitalPercentChanged(const FOnAttributeChangeData& Data)
+{
+	RefreshVitalPercentScaling();
+}
+
+void AROHCharacterBase::RefreshVitalPercentScaling()
+{
+	if (!AbilitySystemComponent || !AttributeSet)
+	{
+		return;
+	}
+
+	// 이전 GE 제거는 새 GE 적용 뒤에 한다 — 제거가 먼저면 Max가 순간 무배율로 하락해
+	// PostAttributeChange 클램프가 현재 HP/MP를 영구히 깎는다 (Sup b29 지적).
+	// 배율 하락(장비 해제) 시의 클램프는 의도된 동작으로 유지된다.
+	const FActiveGameplayEffectHandle PreviousHandle = VitalPctEffectHandle;
+	VitalPctEffectHandle = FActiveGameplayEffectHandle();
+
+	const float HealthPct = AttributeSet->GetHealthPct();
+	const float ManaPct = AttributeSet->GetManaPct();
+	// % 전부 0 = GE 없음 — 리팩터 전 수치와 완전 동일 (b29 회귀 가드)
+	if (!FMath::IsNearlyZero(HealthPct) || !FMath::IsNearlyZero(ManaPct))
+	{
+		// docs/10 §2: HPmax = (베이스 + Flat) × (1 + %HP/100)
+		// GAS 집계가 (Base + Additive) × Multiply 라서 MultiplyAdditive 모디파이어 1개 = 문서 공식 그대로.
+		// % 합산(10%+10%=20%)은 HealthPct 어트리뷰트가 Additive로 누적한 뒤 여기서 1회 곱한다 (§1).
+		UGameplayEffect* PctEffect = NewObject<UGameplayEffect>(GetTransientPackage());
+		PctEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+
+		auto AddMultiplier = [PctEffect](const FGameplayAttribute& Attribute, float Pct)
+		{
+			if (FMath::IsNearlyZero(Pct))
+			{
+				return;
+			}
+			FGameplayModifierInfo Modifier;
+			Modifier.Attribute = Attribute;
+			Modifier.ModifierOp = EGameplayModOp::MultiplyAdditive;
+			Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(1.f + Pct / 100.f));
+			PctEffect->Modifiers.Add(Modifier);
+		};
+		AddMultiplier(UROHAttributeSet::GetMaxHealthAttribute(), HealthPct);
+		AddMultiplier(UROHAttributeSet::GetMaxManaAttribute(), ManaPct);
+
+		VitalPctEffectHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+			PctEffect, 1.f, AbilitySystemComponent->MakeEffectContext());
+	}
+
+	if (PreviousHandle.IsValid())
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(PreviousHandle);
+	}
 }
 
 void AROHCharacterBase::InitializeAttributes()
