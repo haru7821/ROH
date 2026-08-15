@@ -107,11 +107,26 @@ void AROHCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// 마나 재생: 초당 1 + 에너지×0.04 (docs/02 §1.3)
-	if (IsAlive() && AttributeSet && AttributeSet->GetMana() < AttributeSet->GetMaxMana())
+	// 재생 (docs/10 §2.3, 초당): HP = VIT×0.05 + FlatRegen, MP = INT(Energy)×0.1 + FlatRegen
+	// 사망 후 재생 금지 — IsAlive 가드 필수 (시체의 Health는 0 < Max)
+	if (IsAlive() && AttributeSet)
 	{
-		const float Regen = (1.f + AttributeSet->GetEnergy() * 0.04f) * DeltaSeconds;
-		AttributeSet->SetMana(FMath::Min(AttributeSet->GetMana() + Regen, AttributeSet->GetMaxMana()));
+		if (AttributeSet->GetHealth() < AttributeSet->GetMaxHealth())
+		{
+			const float HealthGain = (AttributeSet->GetVitality() * 0.05f + AttributeSet->GetHealthRegen()) * DeltaSeconds;
+			if (HealthGain > 0.f)
+			{
+				AttributeSet->SetHealth(FMath::Min(AttributeSet->GetHealth() + HealthGain, AttributeSet->GetMaxHealth()));
+			}
+		}
+		if (AttributeSet->GetMana() < AttributeSet->GetMaxMana())
+		{
+			const float ManaGain = (AttributeSet->GetEnergy() * 0.1f + AttributeSet->GetManaRegen()) * DeltaSeconds;
+			if (ManaGain > 0.f)
+			{
+				AttributeSet->SetMana(FMath::Min(AttributeSet->GetMana() + ManaGain, AttributeSet->GetMaxMana()));
+			}
+		}
 	}
 
 	// 그레이박스: 메시 유무와 무관하게 몸통을 매 프레임 선으로 그린다
@@ -188,12 +203,13 @@ void AROHCharacterBase::InitializeAttributes()
 	AttributeSet->InitEnergy(BaseEnergy);
 	AttributeSet->InitCharacterLevel(BaseLevel);
 
-	// 파생 공식 (docs/02 §1.3) — M3에서 레벨업/장비 반영 시 GameplayEffect로 이관
-	const float MaxHealth = BaseMaxHealth + BaseVitality * 4.f;
+	// 파생 공식 (docs/10 §2): HPmax = HPbase + (레벨-1)×HPPerLevel + VIT×5, MPmax = MPbase + INT×2
+	// 레벨 성장분은 플레이어 프로그레션(LevelUp/RestoreState)과 몬스터 BaseLevel 프리셋 양쪽에서 일관 적용
+	const float MaxHealth = BaseMaxHealth + (BaseLevel - 1.f) * HealthPerLevel + BaseVitality * 5.f;
 	AttributeSet->InitMaxHealth(MaxHealth);
 	AttributeSet->InitHealth(MaxHealth);
 
-	const float MaxMana = 20.f + BaseEnergy * 2.f;
+	const float MaxMana = BaseMaxMana + BaseEnergy * 2.f;
 	AttributeSet->InitMaxMana(MaxMana);
 	AttributeSet->InitMana(MaxMana);
 

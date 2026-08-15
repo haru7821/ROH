@@ -44,6 +44,14 @@ void UROHProgressionComponent::LevelUp()
 	if (UROHAttributeSet* Attributes = GetAttributeSet())
 	{
 		Attributes->SetCharacterLevel(static_cast<float>(Level));
+
+		// 레벨당 HP/MP 성장 (docs/10 §2 — 클래스 프리셋 HealthPerLevel/ManaPerLevel)
+		if (const AROHCharacterBase* OwnerCharacter = Cast<AROHCharacterBase>(GetOwner()))
+		{
+			Attributes->SetMaxHealth(Attributes->GetMaxHealth() + OwnerCharacter->GetHealthPerLevel());
+			Attributes->SetMaxMana(Attributes->GetMaxMana() + OwnerCharacter->GetManaPerLevel());
+		}
+
 		// 레벨업 보너스: 완전 회복
 		Attributes->SetHealth(Attributes->GetMaxHealth());
 		Attributes->SetMana(Attributes->GetMaxMana());
@@ -104,7 +112,7 @@ void UROHProgressionComponent::ApplyStatToAttributes(FName StatName, int32 Point
 	}
 	const float Delta = static_cast<float>(Points);
 
-	// 파생 공식은 docs/02 §1.3 / CharacterBase::InitializeAttributes와 일치시킬 것
+	// 파생 공식은 docs/10 §2 / CharacterBase::InitializeAttributes와 일치시킬 것
 	if (StatName == TEXT("Strength"))
 	{
 		Attributes->SetStrength(Attributes->GetStrength() + Delta);
@@ -118,8 +126,8 @@ void UROHProgressionComponent::ApplyStatToAttributes(FName StatName, int32 Point
 	else if (StatName == TEXT("Vitality"))
 	{
 		Attributes->SetVitality(Attributes->GetVitality() + Delta);
-		Attributes->SetMaxHealth(Attributes->GetMaxHealth() + 4.f * Delta);
-		Attributes->SetHealth(Attributes->GetHealth() + 4.f * Delta);
+		Attributes->SetMaxHealth(Attributes->GetMaxHealth() + 5.f * Delta);
+		Attributes->SetHealth(Attributes->GetHealth() + 5.f * Delta);
 	}
 	else if (StatName == TEXT("Energy"))
 	{
@@ -140,6 +148,17 @@ void UROHProgressionComponent::RestoreState(int32 InLevel, int32 InXP, int32 InS
 	if (UROHAttributeSet* Attributes = GetAttributeSet())
 	{
 		Attributes->SetCharacterLevel(static_cast<float>(Level));
+
+		// 레벨 성장분 재적용 (docs/10 §2): 새 폰은 레벨1 기준으로 초기화되어 있다.
+		// Health/Mana도 함께 올려 기존 복원 결과(분배 재적용 후 사실상 만피)와 동일하게 유지
+		if (const AROHCharacterBase* OwnerCharacter = Cast<AROHCharacterBase>(GetOwner()))
+		{
+			const float LevelDelta = static_cast<float>(Level - 1);
+			Attributes->SetMaxHealth(Attributes->GetMaxHealth() + LevelDelta * OwnerCharacter->GetHealthPerLevel());
+			Attributes->SetHealth(Attributes->GetHealth() + LevelDelta * OwnerCharacter->GetHealthPerLevel());
+			Attributes->SetMaxMana(Attributes->GetMaxMana() + LevelDelta * OwnerCharacter->GetManaPerLevel());
+			Attributes->SetMana(Attributes->GetMana() + LevelDelta * OwnerCharacter->GetManaPerLevel());
+		}
 	}
 	// 분배 내역 재적용 (InitializeAttributes 직후 호출 전제)
 	for (const auto& Pair : AllocatedStats)

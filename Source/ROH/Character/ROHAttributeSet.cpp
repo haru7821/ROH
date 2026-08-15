@@ -10,6 +10,8 @@ UROHAttributeSet::UROHAttributeSet()
 	InitMana(50.f);
 	InitMaxRage(100.f);
 	InitRage(0.f);
+	InitHealthRegen(0.f);
+	InitManaRegen(0.f);
 	InitStrength(10.f);
 	InitDexterity(10.f);
 	InitVitality(10.f);
@@ -22,6 +24,8 @@ UROHAttributeSet::UROHAttributeSet()
 	InitCritChance(0.f);
 	InitCritDamage(150.f); // 치명타 기본 1.5배 (docs/10 §3.2)
 	InitRunePower(0.f);
+	InitAttackSpeedPct(0.f);
+	InitCastSpeedPct(0.f);
 	InitPhysicalResistance(0.f);
 	InitFireResistance(0.f);
 	InitColdResistance(0.f);

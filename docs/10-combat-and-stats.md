@@ -1,7 +1,8 @@
 # 10. 전투 및 스탯 알고리즘 (정식 사양)
 
 > 소유자 제공 설계 문서 (2026-08). 기존 docs/02·03의 전투 수식과 충돌 시 **이 문서가 우선**한다.
-> 구현 현황: 1단계(§3.2, §4.2, §4.3, §5 전체) 적용 — b18. 2단계(§1~2, §3.4)는 후속.
+> 구현 현황: 1단계(§3.2, §4.2, §4.3, §5 전체) — b18. 2단계(§2 HP/MP/재생, §3.4 속도→쿨다운, §4.1) — b20.
+> 미적용: §1 3단 구조의 % 배율 어트리뷰트(아이템 % 옵션 도입 시), §3.1 AP/SP 완전형.
 > 참고: 코드의 `Energy` 어트리뷰트가 본 문서의 INT 역할을 승계한다 (세이브 호환 유지, 명칭 이관은 추후).
 
 ## 1. 스탯 아키텍처
@@ -27,8 +28,8 @@ FinalStat = (BaseStat + AddedFlat) × (1 + TotalPercentMultiplier/100)
 ## 2. 생존/리소스 (2단계 예정)
 
 ```
-HPmax   = (HPbase + 레벨×HPPerLevel + VIT×5 + FlatHP) × (1 + %HP/100)
-MPmax   = (MPbase + 레벨×MPPerLevel + INT×2 + FlatMP) × (1 + %MP/100)
+HPmax   = (HPbase + (레벨−1)×HPPerLevel + VIT×5 + FlatHP) × (1 + %HP/100)   [레벨 1 = 기본치]
+MPmax   = (MPbase + (레벨−1)×MPPerLevel + INT×2 + FlatMP) × (1 + %MP/100)
 HPRegen = (HPRegenBase + VIT×0.05 + Flat) × (1 + %/100)   [초당]
 MPRegen = (MPRegenBase + INT×0.1  + Flat) × (1 + %/100)   [초당]
 ```

@@ -12,6 +12,7 @@ UROHAbility_Bash::UROHAbility_Bash()
 	CooldownDuration = 4.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Bash);
 	HitStopSeconds = 0.08f; // 단일 대상 강타는 히트스톱을 더 묵직하게
+	SpeedScaling = EROHSpeedScaling::Attack; // 공격 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Bash::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

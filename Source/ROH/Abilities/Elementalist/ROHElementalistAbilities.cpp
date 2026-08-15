@@ -47,6 +47,7 @@ UROHAbility_MagicBolt::UROHAbility_MagicBolt()
 	CooldownDuration = 0.5f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_BasicAttack);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_MagicBolt::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -85,6 +86,7 @@ UROHAbility_Fireball::UROHAbility_Fireball()
 	CooldownDuration = 2.5f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Fireball);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Fireball::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -126,6 +128,7 @@ UROHAbility_FrostNova::UROHAbility_FrostNova()
 	CostAmount = 18.f;
 	CooldownDuration = 8.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_FrostNova);
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_FrostNova::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -178,6 +181,7 @@ UROHAbility_Teleport::UROHAbility_Teleport()
 	CostAmount = 15.f;
 	CooldownDuration = 6.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Teleport);
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Teleport::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -232,6 +236,7 @@ UROHAbility_IceBolt::UROHAbility_IceBolt()
 	CooldownDuration = 0.8f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_IceBolt);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_IceBolt::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -274,6 +279,7 @@ UROHAbility_Meteor::UROHAbility_Meteor()
 	CooldownDuration = 6.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Meteor);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Meteor::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -336,6 +342,7 @@ UROHAbility_Blizzard::UROHAbility_Blizzard()
 	CooldownDuration = 10.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Blizzard);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Blizzard::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -412,6 +419,7 @@ UROHAbility_StaticField::UROHAbility_StaticField()
 	CooldownDuration = 1.5f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_StaticField);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Cast; // 시전 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_StaticField::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

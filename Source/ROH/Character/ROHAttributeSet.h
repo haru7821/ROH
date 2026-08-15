@@ -56,6 +56,16 @@ public:
 	FGameplayAttributeData MaxRage;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MaxRage)
 
+	/** 아이템/패시브 고정 생명력 재생 (초당 — docs/10 §2.3, VIT×0.05 항은 Tick 공식이 담당) */
+	UPROPERTY(BlueprintReadOnly, Category = "Vital")
+	FGameplayAttributeData HealthRegen;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, HealthRegen)
+
+	/** 아이템/패시브 고정 마나 재생 (초당 — docs/10 §2.3, INT×0.1 항은 Tick 공식이 담당) */
+	UPROPERTY(BlueprintReadOnly, Category = "Vital")
+	FGameplayAttributeData ManaRegen;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ManaRegen)
+
 	// --- 1차 스탯 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Primary")
 	FGameplayAttributeData Strength;
@@ -110,6 +120,16 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Combat")
 	FGameplayAttributeData RunePower;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, RunePower)
+
+	/** 공격 속도 보너스 % — 아이템/패시브 고정치. DEX/100 항은 쿨다운 공식이 담당 (docs/10 §3.4) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData AttackSpeedPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, AttackSpeedPct)
+
+	/** 시전 속도 보너스 % — 아이템/패시브 고정치. INT/200 항은 쿨다운 공식이 담당 (docs/10 §3.4) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData CastSpeedPct;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, CastSpeedPct)
 
 	/** 물리 피해 감소 FlatPDR% 역할 (docs/10 §4.3). 원소 저항과 별개 축, 캡은 파이프라인에서 90% */
 	UPROPERTY(BlueprintReadOnly, Category = "Resistance")

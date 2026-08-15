@@ -14,6 +14,7 @@ UROHAbility_LeapAttack::UROHAbility_LeapAttack()
 	CostAmount = 20.f;
 	CooldownDuration = 8.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Leap);
+	SpeedScaling = EROHSpeedScaling::Attack; // 공격 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_LeapAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

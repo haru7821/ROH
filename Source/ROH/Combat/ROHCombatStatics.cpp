@@ -54,7 +54,9 @@ bool UROHCombatStatics::ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase
 	if (Params.bUseAttackRoll)
 	{
 		const float AR = FMath::Max(1.f, GetAttr(SourceASC, UROHAttributeSet::GetAttackRatingAttribute()));
-		const float DEF = FMath::Max(1.f, GetAttr(TargetASC, UROHAttributeSet::GetDefenseAttribute()));
+		// 방어 등급 (docs/10 §4.1): DR = Defense × (1 + VIT/100)
+		const float DEF = FMath::Max(1.f, GetAttr(TargetASC, UROHAttributeSet::GetDefenseAttribute())
+			* (1.f + GetAttr(TargetASC, UROHAttributeSet::GetVitalityAttribute()) / 100.f));
 		const float ALvl = FMath::Max(1.f, GetAttr(SourceASC, UROHAttributeSet::GetCharacterLevelAttribute()));
 		const float DLvl = FMath::Max(1.f, GetAttr(TargetASC, UROHAttributeSet::GetCharacterLevelAttribute()));
 

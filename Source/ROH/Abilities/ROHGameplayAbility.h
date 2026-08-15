@@ -10,6 +10,15 @@ class UNiagaraSystem;
 class USoundBase;
 class UCameraShakeBase;
 
+/** 쿨다운에 적용할 속도 축 (docs/10 §3.4를 쿨다운 모델로 번안): Attack=공격 속도, Cast=시전 속도 */
+UENUM()
+enum class EROHSpeedScaling : uint8
+{
+	None,
+	Attack,
+	Cast
+};
+
 /**
  * 모든 스킬의 베이스 (docs/03 §1).
  * - 자원 비용: CostAttribute에서 CostAmount 차감 (전사=Rage, 원소술사=Mana)
@@ -73,6 +82,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Cooldown")
 	FGameplayTagContainer CooldownTags;
+
+	/** 공격/시전 속도로 쿨다운을 단축할지 (docs/10 §3.4). 몬스터 어빌리티는 None 유지 */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Cooldown")
+	EROHSpeedScaling SpeedScaling = EROHSpeedScaling::None;
 
 	// --- 타격 피드백 ---
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Feedback")

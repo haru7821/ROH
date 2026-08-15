@@ -2,6 +2,7 @@
 #include "Abilities/ROHGameplayEffects.h"
 #include "ROH.h" // LogROH
 #include "Character/ROHCharacterBase.h"
+#include "Character/ROHAttributeSet.h"
 #include "Combat/ROHCombatStatics.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Engine/Engine.h"
@@ -129,11 +130,38 @@ void UROHGameplayAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
 	{
 		return;
 	}
+
+	// 공격/시전 속도에 따른 쿨다운 단축 (docs/10 §3.4)
+	// 공격: Base / (1 + DEX/100 + %AS/100), 시전: Base / (1 + INT(Energy)/200 + %CS/100)
+	// 하한 Base×0.25 (+300% 속도 캡)
+	float FinalCooldown = CooldownDuration;
+	const UAbilitySystemComponent* OwnerASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	if (SpeedScaling != EROHSpeedScaling::None && OwnerASC)
+	{
+		float SpeedDivisor = 1.f;
+		if (SpeedScaling == EROHSpeedScaling::Attack)
+		{
+			SpeedDivisor = 1.f
+				+ OwnerASC->GetNumericAttribute(UROHAttributeSet::GetDexterityAttribute()) / 100.f
+				+ OwnerASC->GetNumericAttribute(UROHAttributeSet::GetAttackSpeedPctAttribute()) / 100.f;
+		}
+		else
+		{
+			SpeedDivisor = 1.f
+				+ OwnerASC->GetNumericAttribute(UROHAttributeSet::GetEnergyAttribute()) / 200.f
+				+ OwnerASC->GetNumericAttribute(UROHAttributeSet::GetCastSpeedPctAttribute()) / 100.f;
+		}
+		if (SpeedDivisor > 0.f)
+		{
+			FinalCooldown = FMath::Max(CooldownDuration / SpeedDivisor, CooldownDuration * 0.25f);
+		}
+	}
+
 	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(UROHCooldownEffect::StaticClass(), GetAbilityLevel());
 	if (SpecHandle.IsValid())
 	{
 		SpecHandle.Data->DynamicGrantedTags.AppendTags(CooldownTags);
-		SpecHandle.Data->SetSetByCallerMagnitude(ROHGameplayTags::Data_Cooldown, CooldownDuration);
+		SpecHandle.Data->SetSetByCallerMagnitude(ROHGameplayTags::Data_Cooldown, FinalCooldown);
 		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
 	}
 }

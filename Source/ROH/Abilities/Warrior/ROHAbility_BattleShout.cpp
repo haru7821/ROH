@@ -14,6 +14,7 @@ UROHAbility_BattleShout::UROHAbility_BattleShout()
 	CooldownDuration = 15.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_BattleShout);
 	HitStopSeconds = 0.f;
+	SpeedScaling = EROHSpeedScaling::Attack; // 공격 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_BattleShout::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

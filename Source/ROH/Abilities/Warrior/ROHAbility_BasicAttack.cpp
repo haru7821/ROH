@@ -7,8 +7,9 @@
 
 UROHAbility_BasicAttack::UROHAbility_BasicAttack()
 {
-	CooldownDuration = 0.5f; // 공격 속도. M2에서 장비 공속 접사로 대체
+	CooldownDuration = 0.5f; // 기본 공격 주기 — 공속 스케일은 SpeedScaling이 적용
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_BasicAttack);
+	SpeedScaling = EROHSpeedScaling::Attack; // 공격 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_BasicAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

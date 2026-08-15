@@ -14,7 +14,11 @@ AROHWarriorCharacter::AROHWarriorCharacter()
 	BaseDexterity = 20.f;
 	BaseVitality = 25.f;
 	BaseEnergy = 10.f;
-	BaseMaxHealth = 50.f; // 최종 생명력 = 50 + 25×4 = 150
+	// docs/10 §2: 레벨1 생명력 = 100 + 25×5 = 225, 마나 = 20 + 10×2 = 40
+	BaseMaxHealth = 100.f;
+	HealthPerLevel = 10.f;
+	BaseMaxMana = 20.f;
+	ManaPerLevel = 2.f;
 
 	DefaultAbilities.Add(UROHAbility_BasicAttack::StaticClass());
 	DefaultAbilities.Add(UROHAbility_Bash::StaticClass());
@@ -32,7 +36,11 @@ AROHElementalistCharacter::AROHElementalistCharacter()
 	BaseDexterity = 15.f;
 	BaseVitality = 15.f;
 	BaseEnergy = 30.f;
-	BaseMaxHealth = 40.f; // 최종 생명력 = 40 + 15×4 = 100
+	// docs/10 §2: 레벨1 생명력 = 60 + 15×5 = 135, 마나 = 50 + 30×2 = 110
+	BaseMaxHealth = 60.f;
+	HealthPerLevel = 5.f;
+	BaseMaxMana = 50.f;
+	ManaPerLevel = 5.f;
 
 	DefaultAbilities.Add(UROHAbility_MagicBolt::StaticClass());
 	DefaultAbilities.Add(UROHAbility_Fireball::StaticClass());

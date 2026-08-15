@@ -11,6 +11,7 @@ UROHAbility_Whirlwind::UROHAbility_Whirlwind()
 	CostAmount = 25.f;
 	CooldownDuration = 6.f;
 	CooldownTags.AddTag(ROHGameplayTags::Cooldown_Skill_Whirlwind);
+	SpeedScaling = EROHSpeedScaling::Attack; // 공격 속도 스케일 (docs/10 §3.4)
 }
 
 void UROHAbility_Whirlwind::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

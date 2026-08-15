@@ -94,6 +94,10 @@ void UROHItemDatabase::BuildDefaultData()
 	AddAffix("OfVenomWard", TEXT("독막이"),   false, UROHAttributeSet::GetPoisonResistanceAttribute(), 5.f, 20.f, 2, {});
 	AddAffix("OfShadowWard",TEXT("그림자막이"), false, UROHAttributeSet::GetShadowResistanceAttribute(), 5.f, 20.f, 3, {});
 	AddAffix("OfRunes",     TEXT("룬각인의"), false, UROHAttributeSet::GetRunePowerAttribute(), 5.f, 15.f, 5, {}); // 룬 배율 합산원 (docs/10 §5.2)
+	AddAffix("OfAlacrity",  TEXT("질풍의"),   false, UROHAttributeSet::GetAttackSpeedPctAttribute(), 5.f, 15.f, 4, { EROHEquipSlot::Weapon }); // 공속 (docs/10 §3.4)
+	AddAffix("OfCelerity",  TEXT("쾌속의"),   false, UROHAttributeSet::GetCastSpeedPctAttribute(), 5.f, 15.f, 4, {});
+	AddAffix("OfRecovery",  TEXT("회복의"),   false, UROHAttributeSet::GetHealthRegenAttribute(), 1.f, 3.f, 2, {});
+	AddAffix("OfClarity",   TEXT("명상의"),   false, UROHAttributeSet::GetManaRegenAttribute(), 1.f, 3.f, 2, {});
 	AddAffix("OfHaste",     TEXT("신속의"),   false, UROHAttributeSet::GetMoveSpeedAttribute(), 20.f, 60.f, 4, { EROHEquipSlot::Boots });
 
 	// ---------- 트레저 클래스 ----------

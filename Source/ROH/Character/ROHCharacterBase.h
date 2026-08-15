@@ -35,6 +35,10 @@ public:
 
 	bool IsAlive() const;
 
+	/** 레벨업/세이브 복원 시 프로그레션 컴포넌트가 참조 (docs/10 §2) */
+	float GetHealthPerLevel() const { return HealthPerLevel; }
+	float GetManaPerLevel() const { return ManaPerLevel; }
+
 	/** 피해 반영 직후 호출 (피격 연출 훅). AttributeSet에서 호출한다. */
 	virtual void HandleDamageTaken(float Damage, AActor* InstigatorActor);
 
@@ -52,7 +56,7 @@ protected:
 
 	void InitAbilityActorInfo();
 
-	/** 기본 스탯 프로퍼티를 어트리뷰트에 반영. 파생 공식 포함 (docs/02 §1.3) */
+	/** 기본 스탯 프로퍼티를 어트리뷰트에 반영. 파생 공식 포함 (docs/10 §2) */
 	virtual void InitializeAttributes();
 
 	void GrantDefaultAbilities();
@@ -90,6 +94,17 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Stats")
 	float BaseMaxHealth = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Stats")
+	float BaseMaxMana = 20.f;
+
+	/** 레벨당 최대 생명력 성장 (docs/10 §2 — 몬스터는 0으로 기존 고정 HP 유지) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Stats")
+	float HealthPerLevel = 0.f;
+
+	/** 레벨당 최대 마나 성장 (docs/10 §2) */
+	UPROPERTY(EditDefaultsOnly, Category = "ROH|Stats")
+	float ManaPerLevel = 0.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Stats")
 	float BaseMoveSpeed = 600.f;
