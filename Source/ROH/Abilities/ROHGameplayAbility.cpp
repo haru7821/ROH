@@ -42,6 +42,56 @@ void UROHGameplayAbility::ApplyCost(const FGameplayAbilitySpecHandle Handle, con
 	}
 }
 
+bool UROHGameplayAbility::CommitAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, FGameplayTagContainer* OptionalRelevantTags)
+{
+	// 그레이박스 피드백: 자원 차감/불발 사유가 화면에 보이지 않으면 유저가 판단할 수 없다
+	const AROHCharacterBase* Character = GetROHCharacter();
+	const bool bShowFeedback = GEngine && Character && Character->IsPlayerControlled();
+
+	auto ResourceName = [this]() -> FString
+	{
+		const FString AttributeName = CostAttribute.GetName();
+		if (AttributeName == TEXT("Rage")) { return TEXT("분노"); }
+		if (AttributeName == TEXT("Mana")) { return TEXT("마나"); }
+		return AttributeName;
+	};
+
+	if (Super::CommitAbility(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
+	{
+		if (bShowFeedback && CostAttribute.IsValid() && CostAmount > 0.f)
+		{
+			const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+			const float Remaining = ASC ? ASC->GetNumericAttribute(CostAttribute) : 0.f;
+			GEngine->AddOnScreenDebugMessage(6, 1.5f, FColor::Silver,
+				FString::Printf(TEXT("%s -%.0f (잔여 %.0f)"), *ResourceName(), CostAmount, Remaining));
+		}
+		return true;
+	}
+
+	if (bShowFeedback)
+	{
+		const FString SkillName = SkillId.IsNone() ? TEXT("기본 공격") : SkillId.ToString();
+		FString Reason;
+		if (!CheckCooldown(Handle, ActorInfo))
+		{
+			Reason = FString::Printf(TEXT("%s: 쿨다운 중"), *SkillName);
+		}
+		else if (!CheckCost(Handle, ActorInfo))
+		{
+			const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+			const float Current = ASC && CostAttribute.IsValid() ? ASC->GetNumericAttribute(CostAttribute) : 0.f;
+			Reason = FString::Printf(TEXT("%s: %s 부족 (%.0f 필요, 현재 %.0f)"),
+				*SkillName, *ResourceName(), CostAmount, Current);
+		}
+		else
+		{
+			Reason = FString::Printf(TEXT("%s: 발동 불가"), *SkillName);
+		}
+		GEngine->AddOnScreenDebugMessage(4, 2.f, FColor::Orange, Reason);
+	}
+	return false;
+}
+
 const FGameplayTagContainer* UROHGameplayAbility::GetCooldownTags() const
 {
 	FGameplayTagContainer* MutableTags = const_cast<FGameplayTagContainer*>(&TempCooldownTags);
