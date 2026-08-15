@@ -25,6 +25,19 @@ public:
 	const FROHAffixDef* FindAffix(FName AffixId) const;
 	const FROHTreasureClassDef* FindTreasureClass(FName TCId) const;
 
+	// --- 룬/룬워드 (M5 — docs/02 §4, docs/10 §5.2) ---
+	const FROHRuneDef* FindRune(FName RuneId) const;
+	const FROHRuneDef* FindRuneByTier(int32 Tier) const;
+	/** 룬 아이템 베이스("Rune_<Id>")에서 룬 정의 역조회. 룬 베이스가 아니면 null */
+	const FROHRuneDef* FindRuneByBaseId(FName BaseId) const;
+	const TArray<FROHRuneDef>& GetRunes() const { return Runes; }
+	static FName GetRuneBaseId(FName RuneId);
+
+	const FROHRunewordDef* FindRuneword(FName RunewordId) const;
+	const TArray<FROHRunewordDef>& GetRunewords() const { return Runewords; }
+	/** 룬워드 완성 검사 (일반 등급 + 슬롯 + 소켓 수 + 룬 순서 일치). 미완성이면 null */
+	const FROHRunewordDef* MatchRuneword(const FROHItemInstance& Item) const;
+
 	/** 등급 판정: 매직파인드(MF)는 체감 곡선 적용 (docs/02 §3.4) */
 	EROHItemQuality RollQuality(int32 ItemLevel, float MagicFind, FRandomStream& Rng) const;
 
@@ -42,8 +55,16 @@ public:
 private:
 	void RollAffixes(FROHItemInstance& Instance, const FROHItemBaseDef& Base, FRandomStream& Rng) const;
 	TArray<const FROHAffixDef*> GetEligibleAffixes(const FROHItemBaseDef& Base, int32 ItemLevel, bool bPrefix) const;
+	/** 장비 소켓 굴림 (무기/방패/투구/흉갑만, ilvl 게이트) */
+	void RollSockets(FROHItemInstance& Instance, const FROHItemBaseDef& Base, FRandomStream& Rng) const;
+	/** 룬 드랍 티어 추첨 (ilvl 게이트 + 티어당 가중치 반감) 후 인스턴스 생성 */
+	FROHItemInstance GenerateRuneDrop(int32 ItemLevel, FRandomStream& Rng) const;
 
 	TMap<FName, FROHItemBaseDef> Bases;
 	TMap<FName, FROHAffixDef> Affixes;
 	TMap<FName, FROHTreasureClassDef> TreasureClasses;
+
+	/** 룬 12종 (인덱스 = 티어-1) / 룬워드 8종 — 코드 레지스트리 (M5) */
+	TArray<FROHRuneDef> Runes;
+	TArray<FROHRunewordDef> Runewords;
 };

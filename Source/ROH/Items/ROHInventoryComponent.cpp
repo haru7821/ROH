@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffect.h"
+#include "Engine/Engine.h" // GEngine 화면 메시지 (룬워드 완성 알림)
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
 #include "ROH.h"
@@ -42,6 +43,16 @@ bool UROHInventoryComponent::AddItem(const FROHItemInstance& Item)
 		return false;
 	}
 	Items.Add(Item);
+	return true;
+}
+
+bool UROHInventoryComponent::RemoveItemAt(int32 ItemIndex)
+{
+	if (!Items.IsValidIndex(ItemIndex))
+	{
+		return false;
+	}
+	Items.RemoveAt(ItemIndex);
 	return true;
 }
 
@@ -152,6 +163,30 @@ void UROHInventoryComponent::ApplyEquipEffect(EROHEquipSlot Slot, const FROHItem
 		AddModifier(Affix.Attribute, Affix.Value);
 	}
 
+	// 소켓 룬/룬워드 (M5): 세이브엔 ID만 저장 — 보너스는 항상 DB에서 해석 (로드 갱신 불필요)
+	float TotalRunePower = 0.f;
+	for (const FName& RuneId : Item.SocketedRunes)
+	{
+		if (const FROHRuneDef* Rune = Database->FindRune(RuneId))
+		{
+			AddModifier(Rune->BonusAttribute, Rune->BonusValue);
+			TotalRunePower += Rune->RunePower;
+		}
+	}
+	if (!Item.RunewordId.IsNone())
+	{
+		if (const FROHRunewordDef* Runeword = Database->FindRuneword(Item.RunewordId))
+		{
+			for (const FROHRunewordBonus& Bonus : Runeword->Bonuses)
+			{
+				AddModifier(Bonus.Attribute, Bonus.Value);
+			}
+			TotalRunePower += Runeword->RunePower;
+		}
+	}
+	// 룬 위력 → ×(1 + RunePower/100) 최종 피해 배율 합산원 (docs/10 §5.2)
+	AddModifier(UROHAttributeSet::GetRunePowerAttribute(), TotalRunePower);
+
 	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
 	Context.AddSourceObject(this);
 	const FActiveGameplayEffectHandle Handle = ASC->ApplyGameplayEffectToSelf(EquipEffect, 1.f, Context);
@@ -199,6 +234,60 @@ bool UROHInventoryComponent::UseFirstPotion()
 		}
 	}
 	return false;
+}
+
+bool UROHInventoryComponent::SocketRune(int32 ItemIndex, int32 RuneItemIndex, FString& OutError)
+{
+	UROHItemDatabase* Database = GetDatabase();
+	if (!Database)
+	{
+		OutError = TEXT("아이템 데이터베이스가 없습니다.");
+		return false;
+	}
+	if (ItemIndex == RuneItemIndex || !Items.IsValidIndex(ItemIndex) || !Items.IsValidIndex(RuneItemIndex))
+	{
+		OutError = TEXT("잘못된 인덱스입니다. ROHDumpInventory로 확인하세요.");
+		return false;
+	}
+
+	const FROHRuneDef* Rune = Database->FindRuneByBaseId(Items[RuneItemIndex].BaseId);
+	if (!Rune)
+	{
+		OutError = TEXT("두 번째 인덱스는 룬이어야 합니다.");
+		return false;
+	}
+
+	FROHItemInstance& Target = Items[ItemIndex];
+	const FROHItemBaseDef* TargetBase = Database->FindBase(Target.BaseId);
+	if (!TargetBase || TargetBase->Kind != EROHItemKind::Equipment)
+	{
+		OutError = TEXT("첫 번째 인덱스는 장비여야 합니다. (장착 중이면 해제 후 소켓하세요)");
+		return false;
+	}
+	if (Target.SocketedRunes.Num() >= Target.MaxSockets)
+	{
+		OutError = Target.MaxSockets == 0 ? TEXT("소켓이 없는 장비입니다.") : TEXT("빈 소켓이 없습니다.");
+		return false;
+	}
+
+	Target.SocketedRunes.Add(Rune->RuneId);
+
+	// 룬워드 완성 검사 — 완성 시 등급 승격 (표시 색/명칭 자동 전환)
+	if (const FROHRunewordDef* Runeword = Database->MatchRuneword(Target))
+	{
+		Target.RunewordId = Runeword->RunewordId;
+		Target.Quality = EROHItemQuality::Runeword;
+		UE_LOG(LogROH, Log, TEXT("룬워드 완성: %s (%s)"), *Runeword->DisplayName.ToString(), *Target.BaseId.ToString());
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor::Green,
+				FString::Printf(TEXT("룬워드 완성: %s!"), *Runeword->DisplayName.ToString()));
+		}
+	}
+
+	// 룬 소모는 마지막에 — RemoveAt이 Target 참조를 무효화할 수 있으므로 수정 완료 후 제거
+	Items.RemoveAt(RuneItemIndex);
+	return true;
 }
 
 void UROHInventoryComponent::ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const

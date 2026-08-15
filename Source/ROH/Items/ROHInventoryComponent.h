@@ -26,6 +26,9 @@ public:
 	/** 습득. 가득 차면 false */
 	bool AddItem(const FROHItemInstance& Item);
 
+	/** 인벤토리 아이템 제거 (합성 소모/추후 UI 버리기용) */
+	bool RemoveItemAt(int32 ItemIndex);
+
 	/** 인벤토리 인덱스의 장비를 장착 (해당 슬롯 기존 장비는 인벤토리로) */
 	bool EquipItemByIndex(int32 ItemIndex);
 
@@ -36,6 +39,12 @@ public:
 
 	/** 첫 번째 물약 사용 (즉시 회복). M4에서 벨트 슬롯으로 확장 */
 	bool UseFirstPotion();
+
+	/**
+	 * 룬 소켓 (M5): 인벤토리의 룬을 인벤토리의 장비 빈 소켓에 삽입, 완성 시 룬워드 승격.
+	 * 장착 중인 장비는 Items 배열에 없어 자연히 대상 제외 (해제 후 소켓).
+	 */
+	bool SocketRune(int32 ItemIndex, int32 RuneItemIndex, FString& OutError);
 
 	void AddGold(int32 Amount);
 	bool SpendGold(int32 Amount);

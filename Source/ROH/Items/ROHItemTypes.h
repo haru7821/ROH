@@ -31,7 +31,8 @@ UENUM(BlueprintType)
 enum class EROHItemKind : uint8
 {
 	Equipment,
-	Potion
+	Potion,
+	Rune // M5: 소켓/룬워드 재료 (인벤토리 보관형, 장착 불가)
 };
 
 /** 베이스 아이템 정의 (데이터 주도 — M2는 C++ 기본 데이터, 추후 DataTable 애셋으로 이관 가능) */
@@ -154,7 +155,54 @@ struct FROHItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	TArray<FROHAffixRoll> Affixes;
 
+	// --- 소켓/룬워드 (M5 — 추가 필드라 구버전 세이브는 기본값으로 로드) ---
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	int32 MaxSockets = 0;
+
+	/** 삽입된 룬 ID (삽입 순서 유지 — 룬워드는 순서까지 일치해야 완성) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	TArray<FName> SocketedRunes;
+
+	/** 완성된 룬워드 ID (None = 미완성). 보너스는 장착 시 DB에서 해석 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	FName RunewordId;
+
 	bool IsValid() const { return !BaseId.IsNone(); }
+};
+
+/**
+ * 룬 정의 (M5, docs/02 §4 / docs/10 §5.2). 레지스트리는 코드 전용이라 리플렉션 불필요.
+ * 소켓 시 BonusAttribute/BonusValue 가산 + RunePower(티어×0.5)가 최종 피해 배율에 합산된다.
+ */
+struct FROHRuneDef
+{
+	FName RuneId;
+	FText DisplayName;
+	int32 Tier = 1;
+	FGameplayAttribute BonusAttribute;
+	float BonusValue = 0.f;
+	float RunePower = 0.f;
+};
+
+/** 룬워드 보너스 한 줄 (코드 레지스트리 전용) */
+struct FROHRunewordBonus
+{
+	FGameplayAttribute Attribute;
+	float Value = 0.f;
+};
+
+/**
+ * 룬워드 정의 (M5): 일반(Normal) 등급 + 소켓 수 일치 + 룬 순서 일치 시 완성.
+ * 완성 시 아이템 Quality가 Runeword로 승격되고 장착 시 Bonuses/RunePower가 추가 적용된다.
+ */
+struct FROHRunewordDef
+{
+	FName RunewordId;
+	FText DisplayName;
+	EROHEquipSlot RequiredSlot = EROHEquipSlot::Weapon;
+	TArray<FName> RuneSequence;
+	TArray<FROHRunewordBonus> Bonuses;
+	float RunePower = 0.f;
 };
 
 UENUM(BlueprintType)
@@ -163,7 +211,8 @@ enum class EROHTreasureEntryType : uint8
 	NoDrop,
 	Gold,
 	BaseItem,  // Ref = BaseId
-	SubTable   // Ref = 하위 TC Id
+	SubTable,  // Ref = 하위 TC Id
+	Rune       // M5: 티어 추첨형 룬 드랍 (Ref 미사용 — ilvl 게이트 + 저티어 가중)
 };
 
 /** 트레저 클래스 항목 (가중치 추첨) */

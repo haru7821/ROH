@@ -109,4 +109,22 @@ public:
 	/** 활성화된 웨이포인트로 순간이동. 인자 없이 호출하면 지역 목록/활성 상태 출력. 예: ROHWarp 2 */
 	UFUNCTION(Exec)
 	void ROHWarp(int32 ZoneIndex = -1);
+
+	// --- M5 룬/룬워드 ---
+
+	/** 룬 지급: 티어 번호 또는 룬 ID. 예: ROHGiveRune 3 / ROHGiveRune Azak 2 */
+	UFUNCTION(Exec)
+	void ROHGiveRune(FString TierOrName, int32 Count = 1);
+
+	/** 3:1 합성: 같은 티어 룬 3개 → 상위 티어 1개 (낮은 티어 우선) */
+	UFUNCTION(Exec)
+	void ROHTransmute();
+
+	/** 룬 12종(보유 수 포함) + 룬워드 조합법 출력 */
+	UFUNCTION(Exec)
+	void ROHRunes();
+
+	/** 인벤토리 장비에 룬 소켓. 예: ROHSocket 0 3 (0=장비 인덱스, 3=룬 인덱스) */
+	UFUNCTION(Exec)
+	void ROHSocket(int32 ItemIndex, int32 RuneItemIndex);
 };

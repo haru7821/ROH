@@ -25,6 +25,8 @@ void UROHItemDatabase::BuildDefaultData()
 	Bases.Reset();
 	Affixes.Reset();
 	TreasureClasses.Reset();
+	Runes.Reset();
+	Runewords.Reset();
 
 	// ---------- 베이스 아이템 ----------
 	auto AddBase = [this](FName Id, const TCHAR* Name, EROHItemKind Kind, EROHEquipSlot Slot,
@@ -55,6 +57,91 @@ void UROHItemDatabase::BuildDefaultData()
 	AddBase("ChainMail",    TEXT("사슬갑옷"), EROHItemKind::Equipment, EROHEquipSlot::Chest,  0.f, 0.f, 30.f, 6, 0.f, 120);
 	AddBase("LeatherBoots", TEXT("가죽장화"), EROHItemKind::Equipment, EROHEquipSlot::Boots,  0.f, 0.f, 5.f, 1, 0.f, 20);
 	AddBase("HealthPotion", TEXT("치유물약"), EROHItemKind::Potion,    EROHEquipSlot::None,   0.f, 0.f, 0.f, 1, 60.f, 50);
+
+	// ---------- 룬 12종 (M5 — docs/06 아자크론의 33 룬 봉인 중 발굴된 12종) ----------
+	// 소켓 보너스(단일 어트리뷰트) + 룬 위력(티어×0.5%, 최종 피해 곱연산 합산원 — docs/10 §5.2)
+	auto AddRune = [this, &AddBase](FName RuneId, const TCHAR* Name, int32 Tier, FGameplayAttribute Attr, float Value)
+	{
+		FROHRuneDef Def;
+		Def.RuneId = RuneId;
+		Def.DisplayName = FText::FromString(Name);
+		Def.Tier = Tier;
+		Def.BonusAttribute = Attr;
+		Def.BonusValue = Value;
+		Def.RunePower = Tier * 0.5f;
+		check(Def.Tier == Runes.Num() + 1); // FindRuneByTier의 인덱스 계약: 등록 순서 = 티어 순서
+		Runes.Add(Def);
+
+		// 룬은 아이템: 인벤토리 보관/드랍/합성 재료 (골드 가치는 티어 비례)
+		AddBase(GetRuneBaseId(RuneId), *FString::Printf(TEXT("%s 룬"), Name),
+			EROHItemKind::Rune, EROHEquipSlot::None, 0.f, 0.f, 0.f, 1, 0.f, 50 * Tier);
+	};
+
+	//      Id       이름          티어  소켓 보너스
+	AddRune("En",   TEXT("엔"),     1,  UROHAttributeSet::GetAttackRatingAttribute(), 5.f);
+	AddRune("Od",   TEXT("오드"),   2,  UROHAttributeSet::GetMaxHealthAttribute(), 8.f);
+	AddRune("Kar",  TEXT("카르"),   3,  UROHAttributeSet::GetAttackPowerAttribute(), 2.f);
+	AddRune("Mun",  TEXT("문"),     4,  UROHAttributeSet::GetMaxManaAttribute(), 6.f);
+	AddRune("Rea",  TEXT("레아"),   5,  UROHAttributeSet::GetFireResistanceAttribute(), 5.f);
+	AddRune("Tis",  TEXT("티스"),   6,  UROHAttributeSet::GetColdResistanceAttribute(), 5.f);
+	AddRune("Har",  TEXT("하르"),   7,  UROHAttributeSet::GetLightningResistanceAttribute(), 5.f);
+	AddRune("Bel",  TEXT("벨"),     8,  UROHAttributeSet::GetHealthRegenAttribute(), 1.f);
+	AddRune("Gul",  TEXT("굴"),     9,  UROHAttributeSet::GetDefenseAttribute(), 8.f);
+	AddRune("Zar",  TEXT("자르"),   10, UROHAttributeSet::GetCritChanceAttribute(), 3.f);
+	AddRune("Keon", TEXT("케온"),   11, UROHAttributeSet::GetAttackSpeedPctAttribute(), 10.f);
+	AddRune("Azak", TEXT("아자크"), 12, UROHAttributeSet::GetRunePowerAttribute(), 5.f); // 정점 룬: 보너스도 룬 위력 (중첩 의도)
+
+	// ---------- 룬워드 8종 (M5 — 일반 등급 + 소켓 수/순서 일치 시 완성) ----------
+	auto AddRuneword = [this](FName Id, const TCHAR* Name, EROHEquipSlot Slot,
+		std::initializer_list<FName> Sequence, std::initializer_list<FROHRunewordBonus> Bonuses, float RunePower)
+	{
+		FROHRunewordDef Def;
+		Def.RunewordId = Id;
+		Def.DisplayName = FText::FromString(Name);
+		Def.RequiredSlot = Slot;
+		Def.RuneSequence = Sequence;
+		Def.Bonuses = Bonuses;
+		Def.RunePower = RunePower;
+		Runewords.Add(Def);
+	};
+	auto RB = [](FGameplayAttribute Attr, float Value)
+	{
+		FROHRunewordBonus Bonus;
+		Bonus.Attribute = Attr;
+		Bonus.Value = Value;
+		return Bonus;
+	};
+
+	AddRuneword("Oath",     TEXT("맹세"), EROHEquipSlot::Weapon, { "En", "Kar" },
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 10.f),
+		  RB(UROHAttributeSet::GetAttackRatingAttribute(), 25.f) }, 0.f);
+	AddRuneword("Wisdom",   TEXT("지혜"), EROHEquipSlot::Helm, { "Mun", "Tis" },
+		{ RB(UROHAttributeSet::GetMaxManaAttribute(), 30.f),
+		  RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 10.f),
+		  RB(UROHAttributeSet::GetMagicFindAttribute(), 15.f) }, 0.f);
+	AddRuneword("Guard",    TEXT("수호"), EROHEquipSlot::Shield, { "Od", "Tis" },
+		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 25.f),
+		  RB(UROHAttributeSet::GetColdResistanceAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetDefenseAttribute(), 15.f) }, 0.f);
+	AddRuneword("Embers",   TEXT("잿불"), EROHEquipSlot::Chest, { "Rea", "Mun" },
+		{ RB(UROHAttributeSet::GetFireResistanceAttribute(), 20.f),
+		  RB(UROHAttributeSet::GetMaxManaAttribute(), 20.f),
+		  RB(UROHAttributeSet::GetManaRegenAttribute(), 2.f) }, 0.f);
+	AddRuneword("Bastion",  TEXT("성채"), EROHEquipSlot::Chest, { "Od", "Gul", "Rea" },
+		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 50.f),
+		  RB(UROHAttributeSet::GetDefenseAttribute(), 30.f),
+		  RB(UROHAttributeSet::GetFireResistanceAttribute(), 15.f) }, 0.f);
+	AddRuneword("Tempest",  TEXT("폭풍"), EROHEquipSlot::Weapon, { "Har", "Keon", "Zar" },
+		{ RB(UROHAttributeSet::GetLightningResistanceAttribute(), 10.f),
+		  RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 5.f) }, 5.f);
+	AddRuneword("Nether",   TEXT("명계"), EROHEquipSlot::Shield, { "Gul", "Zar", "Azak" },
+		{ RB(UROHAttributeSet::GetDefenseAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetShadowResistanceAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 3.f) }, 6.f);
+	AddRuneword("Carnage",  TEXT("학살"), EROHEquipSlot::Weapon, { "Kar", "Bel", "Azak" },
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 20.f),
+		  RB(UROHAttributeSet::GetCritDamageAttribute(), 30.f) }, 8.f);
 
 	// ---------- 접사 풀 ----------
 	auto AddAffix = [this](FName Id, const TCHAR* Name, bool bPrefix, FGameplayAttribute Attr,
@@ -140,6 +227,7 @@ void UROHItemDatabase::BuildDefaultData()
 		DefaultTC.Entries.Add(MakeEntry(EROHTreasureEntryType::SubTable, "TC_Weapons", 12));
 		DefaultTC.Entries.Add(MakeEntry(EROHTreasureEntryType::SubTable, "TC_Armor", 18));
 		DefaultTC.Entries.Add(MakeEntry(EROHTreasureEntryType::BaseItem, "HealthPotion", 10));
+		DefaultTC.Entries.Add(MakeEntry(EROHTreasureEntryType::Rune, NAME_None, 7)); // M5 룬 드랍
 		TreasureClasses.Add(DefaultTC.TCId, DefaultTC);
 	}
 	{
@@ -151,11 +239,77 @@ void UROHItemDatabase::BuildDefaultData()
 		BossTC.Entries.Add(MakeEntry(EROHTreasureEntryType::SubTable, "TC_Weapons", 30));
 		BossTC.Entries.Add(MakeEntry(EROHTreasureEntryType::SubTable, "TC_Armor", 35));
 		BossTC.Entries.Add(MakeEntry(EROHTreasureEntryType::BaseItem, "HealthPotion", 10));
+		BossTC.Entries.Add(MakeEntry(EROHTreasureEntryType::Rune, NAME_None, 15)); // M5 룬 드랍 (보스 우대)
 		TreasureClasses.Add(BossTC.TCId, BossTC);
 	}
 
-	UE_LOG(LogROH, Log, TEXT("ItemDatabase: 베이스 %d, 접사 %d, TC %d 등록"),
-		Bases.Num(), Affixes.Num(), TreasureClasses.Num());
+	UE_LOG(LogROH, Log, TEXT("ItemDatabase: 베이스 %d, 접사 %d, TC %d, 룬 %d, 룬워드 %d 등록"),
+		Bases.Num(), Affixes.Num(), TreasureClasses.Num(), Runes.Num(), Runewords.Num());
+}
+
+const FROHRuneDef* UROHItemDatabase::FindRune(FName RuneId) const
+{
+	for (const FROHRuneDef& Def : Runes)
+	{
+		if (Def.RuneId == RuneId)
+		{
+			return &Def;
+		}
+	}
+	return nullptr;
+}
+
+const FROHRuneDef* UROHItemDatabase::FindRuneByTier(int32 Tier) const
+{
+	return Runes.IsValidIndex(Tier - 1) ? &Runes[Tier - 1] : nullptr;
+}
+
+const FROHRuneDef* UROHItemDatabase::FindRuneByBaseId(FName BaseId) const
+{
+	// 베이스 명명 규약 "Rune_<Id>" 역파싱
+	const FString BaseString = BaseId.ToString();
+	if (!BaseString.StartsWith(TEXT("Rune_")))
+	{
+		return nullptr;
+	}
+	return FindRune(FName(*BaseString.RightChop(5)));
+}
+
+FName UROHItemDatabase::GetRuneBaseId(FName RuneId)
+{
+	return FName(*FString::Printf(TEXT("Rune_%s"), *RuneId.ToString()));
+}
+
+const FROHRunewordDef* UROHItemDatabase::FindRuneword(FName RunewordId) const
+{
+	for (const FROHRunewordDef& Def : Runewords)
+	{
+		if (Def.RunewordId == RunewordId)
+		{
+			return &Def;
+		}
+	}
+	return nullptr;
+}
+
+const FROHRunewordDef* UROHItemDatabase::MatchRuneword(const FROHItemInstance& Item) const
+{
+	// 룬워드는 일반 등급 베이스만 (일반템에 가치 부여 — 디아블로2 관례)
+	const FROHItemBaseDef* Base = FindBase(Item.BaseId);
+	if (!Base || Item.Quality != EROHItemQuality::Normal)
+	{
+		return nullptr;
+	}
+	for (const FROHRunewordDef& Def : Runewords)
+	{
+		if (Def.RequiredSlot == Base->Slot
+			&& Item.MaxSockets == Def.RuneSequence.Num()
+			&& Item.SocketedRunes == Def.RuneSequence)
+		{
+			return &Def;
+		}
+	}
+	return nullptr;
 }
 
 const FROHItemBaseDef* UROHItemDatabase::FindBase(FName BaseId) const
@@ -210,12 +364,63 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 	Instance.Quality = (Base->Kind == EROHItemKind::Equipment) ? Quality : EROHItemQuality::Normal;
 	Instance.Seed = (Seed != 0) ? Seed : MakeRandomSeed();
 
-	if (Base->Kind == EROHItemKind::Equipment && Instance.Quality != EROHItemQuality::Normal)
+	if (Base->Kind == EROHItemKind::Equipment)
 	{
 		FRandomStream Rng(Instance.Seed);
-		RollAffixes(Instance, *Base, Rng);
+		// 접사 먼저 소비 → 소켓: 기존 시드의 접사 재현성 유지 (테스트 ROH.Loot 3번 항목)
+		if (Instance.Quality != EROHItemQuality::Normal)
+		{
+			RollAffixes(Instance, *Base, Rng);
+		}
+		RollSockets(Instance, *Base, Rng);
 	}
 	return Instance;
+}
+
+void UROHItemDatabase::RollSockets(FROHItemInstance& Instance, const FROHItemBaseDef& Base, FRandomStream& Rng) const
+{
+	// 소켓 가능 부위: 무기/방패/투구/흉갑 (장화 제외 — 디아블로2 관례)
+	if (Base.Slot != EROHEquipSlot::Weapon && Base.Slot != EROHEquipSlot::Shield
+		&& Base.Slot != EROHEquipSlot::Helm && Base.Slot != EROHEquipSlot::Chest)
+	{
+		return;
+	}
+
+	// 0/1/2/3개 = 40/30/20/10%, ilvl 게이트 (저레벨 3소켓 룬워드 방지)
+	const float Roll = Rng.FRand();
+	const int32 Rolled = Roll < 0.4f ? 0 : (Roll < 0.7f ? 1 : (Roll < 0.9f ? 2 : 3));
+	const int32 IlvlCap = Instance.ItemLevel < 4 ? 1 : (Instance.ItemLevel < 8 ? 2 : 3);
+	Instance.MaxSockets = FMath::Min(Rolled, IlvlCap);
+}
+
+FROHItemInstance UROHItemDatabase::GenerateRuneDrop(int32 ItemLevel, FRandomStream& Rng) const
+{
+	// 티어 상한 = ilvl/4 + 1 (캡 12), 티어당 가중치 반감 → 저티어 위주, 고티어는 고레벨 파밍 동기
+	const int32 MaxTier = FMath::Clamp(ItemLevel / 4 + 1, 1, 12);
+	int32 TotalWeight = 0;
+	for (int32 Tier = 1; Tier <= MaxTier; ++Tier)
+	{
+		TotalWeight += 1 << (MaxTier - Tier);
+	}
+
+	int32 Roll = Rng.RandRange(0, TotalWeight - 1);
+	int32 ChosenTier = 1;
+	for (int32 Tier = 1; Tier <= MaxTier; ++Tier)
+	{
+		Roll -= 1 << (MaxTier - Tier);
+		if (Roll < 0)
+		{
+			ChosenTier = Tier;
+			break;
+		}
+	}
+
+	const FROHRuneDef* Rune = FindRuneByTier(ChosenTier);
+	if (!Rune)
+	{
+		return FROHItemInstance();
+	}
+	return GenerateItem(GetRuneBaseId(Rune->RuneId), ItemLevel, EROHItemQuality::Normal, Rng.RandRange(1, MAX_int32 - 1));
 }
 
 void UROHItemDatabase::RollAffixes(FROHItemInstance& Instance, const FROHItemBaseDef& Base, FRandomStream& Rng) const
@@ -356,6 +561,15 @@ FROHDropResult UROHItemDatabase::RollTreasureClass(FName TCId, int32 ItemLevel, 
 				}
 				break;
 			}
+			if (Chosen->Type == EROHTreasureEntryType::Rune)
+			{
+				FROHItemInstance Rune = GenerateRuneDrop(ItemLevel, Rng);
+				if (Rune.IsValid())
+				{
+					Result.Items.Add(Rune);
+				}
+				break;
+			}
 			// SubTable → 하위 TC로 내려가서 재추첨
 			Current = FindTreasureClass(Chosen->Ref);
 		}
@@ -369,6 +583,15 @@ FText UROHItemDatabase::GetItemDisplayName(const FROHItemInstance& Instance) con
 	if (!Base)
 	{
 		return FText::FromString(TEXT("???"));
+	}
+
+	// 룬워드 완성품: "[룬워드] 베이스"
+	if (!Instance.RunewordId.IsNone())
+	{
+		if (const FROHRunewordDef* Runeword = FindRuneword(Instance.RunewordId))
+		{
+			return FText::Format(NSLOCTEXT("ROH", "RunewordItemName", "[{0}] {1}"), Runeword->DisplayName, Base->DisplayName);
+		}
 	}
 
 	// 매직: "접두 베이스" 또는 "베이스 (접미)" / 레어: 고정 칭호

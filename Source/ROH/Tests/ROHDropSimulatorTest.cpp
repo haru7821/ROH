@@ -93,7 +93,7 @@ bool FROHDropSimulatorTest::RunTest(const FString& Parameters)
 			}
 		}
 
-		// TC_Default: NoDrop 가중치 35/100 → 30~40% 허용
+		// TC_Default: NoDrop 가중치 35/107 (룬 7 포함, ≈32.7%) → 30~40% 허용
 		const float NoDropRate = static_cast<float>(NoDropCount) / Rolls;
 		TestTrue(FString::Printf(TEXT("NoDrop 비율 30~40%% (실측 %.1f%%)"), NoDropRate * 100.f),
 			NoDropRate > 0.30f && NoDropRate < 0.40f);

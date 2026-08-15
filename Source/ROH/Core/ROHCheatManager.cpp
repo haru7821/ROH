@@ -156,6 +156,29 @@ void UROHCheatManager::ROHDumpInventory()
 
 	CheatPrint(FString::Printf(TEXT("=== 골드: %d ==="), Inventory->GetGold()));
 
+	// 소켓 표시: " 소켓[카르,벨,-]" (M5)
+	auto SocketText = [Database](const FROHItemInstance& Item) -> FString
+	{
+		if (Item.MaxSockets <= 0)
+		{
+			return FString();
+		}
+		TArray<FString> Parts;
+		for (int32 SocketIndex = 0; SocketIndex < Item.MaxSockets; ++SocketIndex)
+		{
+			if (Item.SocketedRunes.IsValidIndex(SocketIndex))
+			{
+				const FROHRuneDef* Rune = Database->FindRune(Item.SocketedRunes[SocketIndex]);
+				Parts.Add(Rune ? Rune->DisplayName.ToString() : Item.SocketedRunes[SocketIndex].ToString());
+			}
+			else
+			{
+				Parts.Add(TEXT("-"));
+			}
+		}
+		return FString::Printf(TEXT(" 소켓[%s]"), *FString::Join(Parts, TEXT(",")));
+	};
+
 	CheatPrint(TEXT("--- 장비창 ---"));
 	for (const auto& Pair : Inventory->GetEquipped())
 	{
@@ -164,18 +187,18 @@ void UROHCheatManager::ROHDumpInventory()
 		{
 			AffixText += FString::Printf(TEXT(" [%s +%.0f]"), *Affix.AffixId.ToString(), Affix.Value);
 		}
-		CheatPrint(FString::Printf(TEXT("슬롯 %d: %s%s"),
+		CheatPrint(FString::Printf(TEXT("슬롯 %d: %s%s%s"),
 			static_cast<int32>(Pair.Key),
-			*Database->GetItemDisplayName(Pair.Value).ToString(), *AffixText));
+			*Database->GetItemDisplayName(Pair.Value).ToString(), *AffixText, *SocketText(Pair.Value)));
 	}
 
 	CheatPrint(TEXT("--- 인벤토리 ---"));
 	const TArray<FROHItemInstance>& Items = Inventory->GetItems();
 	for (int32 i = 0; i < Items.Num(); ++i)
 	{
-		CheatPrint(FString::Printf(TEXT("%d: %s (ilvl %d, 접사 %d)"),
+		CheatPrint(FString::Printf(TEXT("%d: %s (ilvl %d, 접사 %d)%s"),
 			i, *Database->GetItemDisplayName(Items[i]).ToString(),
-			Items[i].ItemLevel, Items[i].Affixes.Num()));
+			Items[i].ItemLevel, Items[i].Affixes.Num(), *SocketText(Items[i])));
 	}
 }
 
@@ -640,5 +663,161 @@ void UROHCheatManager::ROHWarp(int32 ZoneIndex)
 	else
 	{
 		CheatPrint(TEXT("이동 실패 (목적지가 막혀 있음)"));
+	}
+}
+
+void UROHCheatManager::ROHGiveRune(FString TierOrName, int32 Count)
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
+	if (!Database || !Inventory)
+	{
+		return;
+	}
+
+	const FROHRuneDef* Rune = TierOrName.IsNumeric()
+		? Database->FindRuneByTier(FCString::Atoi(*TierOrName))
+		: Database->FindRune(FName(*TierOrName));
+	if (!Rune)
+	{
+		CheatPrint(TEXT("사용법: ROHGiveRune <티어 1~12 또는 룬 ID> [개수] — 목록은 ROHRunes"));
+		return;
+	}
+
+	Count = FMath::Clamp(Count, 1, 40);
+	int32 Given = 0;
+	for (int32 i = 0; i < Count; ++i)
+	{
+		if (Inventory->AddItem(Database->GenerateItem(UROHItemDatabase::GetRuneBaseId(Rune->RuneId), Rune->Tier, EROHItemQuality::Normal)))
+		{
+			++Given;
+		}
+	}
+	CheatPrint(FString::Printf(TEXT("획득: %s 룬 ×%d (T%d)"),
+		*Rune->DisplayName.ToString(), Given, Rune->Tier));
+}
+
+void UROHCheatManager::ROHTransmute()
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
+	if (!Database || !Inventory)
+	{
+		return;
+	}
+
+	// 티어별 보유 룬 인덱스 수집
+	TMap<int32, TArray<int32>> IndicesByTier;
+	const TArray<FROHItemInstance>& Items = Inventory->GetItems();
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		if (const FROHRuneDef* Rune = Database->FindRuneByBaseId(Items[i].BaseId))
+		{
+			IndicesByTier.FindOrAdd(Rune->Tier).Add(i);
+		}
+	}
+
+	// 낮은 티어 우선 3:1 합성 (최고 티어 12는 합성 불가)
+	for (int32 Tier = 1; Tier < 12; ++Tier)
+	{
+		const TArray<int32>* Indices = IndicesByTier.Find(Tier);
+		if (!Indices || Indices->Num() < 3)
+		{
+			continue;
+		}
+
+		// 앞쪽 3개를 소비 — RemoveAt 무효화 방지를 위해 내림차순으로 정렬해 뒤부터 제거
+		TArray<int32> Consume((*Indices).GetData(), 3);
+		Consume.Sort([](int32 A, int32 B) { return A > B; });
+		for (const int32 RemoveIndex : Consume)
+		{
+			Inventory->RemoveItemAt(RemoveIndex);
+		}
+
+		const FROHRuneDef* Result = Database->FindRuneByTier(Tier + 1);
+		if (Result)
+		{
+			Inventory->AddItem(Database->GenerateItem(UROHItemDatabase::GetRuneBaseId(Result->RuneId), Result->Tier, EROHItemQuality::Normal));
+			CheatPrint(FString::Printf(TEXT("합성 성공: T%d 룬 3개 → %s 룬 (T%d)"),
+				Tier, *Result->DisplayName.ToString(), Result->Tier));
+		}
+		return;
+	}
+
+	const TArray<int32>* ApexIndices = IndicesByTier.Find(12);
+	CheatPrint(ApexIndices && ApexIndices->Num() >= 3
+		? TEXT("아자크는 최고 티어 룬입니다 — 더 이상 합성할 수 없습니다")
+		: TEXT("같은 티어 룬 3개가 필요합니다 (ROHRunes로 보유 확인)"));
+}
+
+void UROHCheatManager::ROHRunes()
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
+	if (!Database || !Inventory)
+	{
+		return;
+	}
+
+	TMap<FName, int32> Counts;
+	for (const FROHItemInstance& Item : Inventory->GetItems())
+	{
+		if (const FROHRuneDef* Rune = Database->FindRuneByBaseId(Item.BaseId))
+		{
+			++Counts.FindOrAdd(Rune->RuneId);
+		}
+	}
+
+	CheatPrint(TEXT("=== 룬 12종 (3개 → 상위 1개: ROHTransmute) ==="));
+	for (const FROHRuneDef& Rune : Database->GetRunes())
+	{
+		const int32* Count = Counts.Find(Rune.RuneId);
+		CheatPrint(FString::Printf(TEXT("T%02d %s(%s): %s +%.0f | 룬위력 +%.1f%% | 보유 %d"),
+			Rune.Tier, *Rune.DisplayName.ToString(), *Rune.RuneId.ToString(),
+			*Rune.BonusAttribute.GetName(), Rune.BonusValue, Rune.RunePower, Count ? *Count : 0));
+	}
+
+	auto SlotName = [](EROHEquipSlot Slot) -> const TCHAR*
+	{
+		switch (Slot)
+		{
+		case EROHEquipSlot::Weapon: return TEXT("무기");
+		case EROHEquipSlot::Shield: return TEXT("방패");
+		case EROHEquipSlot::Helm:   return TEXT("투구");
+		case EROHEquipSlot::Chest:  return TEXT("흉갑");
+		case EROHEquipSlot::Boots:  return TEXT("장화");
+		default:                    return TEXT("?");
+		}
+	};
+
+	CheatPrint(TEXT("=== 룬워드 8종 (일반 등급 + 소켓 수/순서 일치 시 완성) ==="));
+	for (const FROHRunewordDef& Runeword : Database->GetRunewords())
+	{
+		TArray<FString> Sequence;
+		for (const FName& RuneId : Runeword.RuneSequence)
+		{
+			const FROHRuneDef* Rune = Database->FindRune(RuneId);
+			Sequence.Add(Rune ? Rune->DisplayName.ToString() : RuneId.ToString());
+		}
+		CheatPrint(FString::Printf(TEXT("[%s] %s — %s"),
+			*Runeword.DisplayName.ToString(), SlotName(Runeword.RequiredSlot), *FString::Join(Sequence, TEXT("+"))));
+	}
+}
+
+void UROHCheatManager::ROHSocket(int32 ItemIndex, int32 RuneItemIndex)
+{
+	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
+	if (!Inventory)
+	{
+		return;
+	}
+	FString Error;
+	if (Inventory->SocketRune(ItemIndex, RuneItemIndex, Error))
+	{
+		CheatPrint(TEXT("소켓 완료 — ROHDumpInventory로 확인"));
+	}
+	else
+	{
+		CheatPrint(FString::Printf(TEXT("소켓 실패: %s"), *Error));
 	}
 }
