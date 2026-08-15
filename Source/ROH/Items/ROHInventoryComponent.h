@@ -46,6 +46,15 @@ public:
 	 */
 	bool SocketRune(int32 ItemIndex, int32 RuneItemIndex, FString& OutError);
 
+	/** 유니크 분해 (M5 2차): 유니크(고대 제외) 파괴 → 성유물 조각 2~4개. 결과/사유는 OutMessage */
+	bool SalvageUnique(int32 ItemIndex, FString& OutMessage);
+
+	/** 고대 합성 (M5 2차): 유니크 + 성유물 조각 5개 → Ancient 승격 (장착 해제 상태만) */
+	bool ForgeAncient(int32 ItemIndex, FString& OutMessage);
+
+	/** 고대 합성에 필요한 성유물 조각 수 */
+	static constexpr int32 AncientForgeCost = 5;
+
 	void AddGold(int32 Amount);
 	bool SpendGold(int32 Amount);
 	int32 GetGold() const { return Gold; }
@@ -66,6 +75,13 @@ protected:
 	void ApplyEquipEffect(EROHEquipSlot Slot, const FROHItemInstance& Item);
 	void RemoveEquipEffect(EROHEquipSlot Slot);
 
+	/**
+	 * 세트 보너스 재계산 (M5 2차): 장착 조합에서 세트별 피스 수 집계 →
+	 * 기존 세트 GE 전부 제거 후 도달 임계(누적)를 세트당 1개 무한 GE로 재적용.
+	 * 장착 상태가 바뀌는 모든 경로(장착/해제/복원) 끝에서 호출할 것.
+	 */
+	void RefreshSetBonuses();
+
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Inventory")
 	int32 Capacity = 40;
 
@@ -77,6 +93,9 @@ private:
 	TMap<EROHEquipSlot, FROHItemInstance> Equipped;
 
 	TMap<EROHEquipSlot, FActiveGameplayEffectHandle> EquipEffectHandles;
+
+	/** 세트별 조합 보너스 GE 핸들 (키 = SetId) */
+	TMap<FName, FActiveGameplayEffectHandle> SetBonusHandles;
 
 	int32 Gold = 0;
 };

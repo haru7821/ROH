@@ -127,6 +127,14 @@ void UROHCheatManager::ROHGiveItem(FName BaseId, int32 ItemLevel, FString Qualit
 	{
 		QualityEnum = EROHItemQuality::Rare;
 	}
+	else if (Quality.Equals(TEXT("unique"), ESearchCase::IgnoreCase))
+	{
+		QualityEnum = EROHItemQuality::Unique; // 후보 없는 베이스/ilvl이면 레어 강등 (DB 규칙)
+	}
+	else if (Quality.Equals(TEXT("set"), ESearchCase::IgnoreCase))
+	{
+		QualityEnum = EROHItemQuality::Set; // 강등 규칙 동일
+	}
 
 	const FROHItemInstance Item = Database->GenerateItem(BaseId, ItemLevel, QualityEnum);
 	if (!Item.IsValid())
@@ -190,6 +198,31 @@ void UROHCheatManager::ROHDumpInventory()
 		CheatPrint(FString::Printf(TEXT("슬롯 %d: %s%s%s"),
 			static_cast<int32>(Pair.Key),
 			*Database->GetItemDisplayName(Pair.Value).ToString(), *AffixText, *SocketText(Pair.Value)));
+	}
+
+	// 세트 장착 집계 (M5 2차): "세트: 잿빛 첨탑 2/3"
+	{
+		TMap<FName, int32> SetCounts;
+		for (const auto& Pair : Inventory->GetEquipped())
+		{
+			if (Pair.Value.SetPieceId.IsNone())
+			{
+				continue;
+			}
+			const FROHSetDef* OwningSet = nullptr;
+			if (Database->FindSetPiece(Pair.Value.SetPieceId, &OwningSet) && OwningSet)
+			{
+				++SetCounts.FindOrAdd(OwningSet->SetId);
+			}
+		}
+		for (const auto& Pair : SetCounts)
+		{
+			if (const FROHSetDef* Set = Database->FindSet(Pair.Key))
+			{
+				CheatPrint(FString::Printf(TEXT("세트: %s %d/%d"),
+					*Set->DisplayName.ToString(), Pair.Value, Set->Pieces.Num()));
+			}
+		}
 	}
 
 	CheatPrint(TEXT("--- 인벤토리 ---"));
@@ -272,7 +305,7 @@ void UROHCheatManager::ROHSimulateDrops(FName TCId, int32 Count)
 	int32 TotalItems = 0;
 	int32 TotalGold = 0;
 	int32 GoldDrops = 0;
-	int32 QualityCounts[3] = { 0, 0, 0 }; // Normal, Magic, Rare
+	int32 QualityCounts[5] = { 0, 0, 0, 0, 0 }; // Normal, Magic, Rare, Unique, Set
 	TMap<FName, int32> BaseCounts;
 
 	for (int32 i = 0; i < Count; ++i)
@@ -286,7 +319,9 @@ void UROHCheatManager::ROHSimulateDrops(FName TCId, int32 Count)
 		}
 		for (const FROHItemInstance& Item : Drop.Items)
 		{
-			const int32 QualityIndex = FMath::Clamp(static_cast<int32>(Item.Quality), 0, 2);
+			// Set은 enum 말미(6)라 클램프만으론 버킷이 어긋난다 — 명시 매핑
+			const int32 QualityIndex = Item.Quality == EROHItemQuality::Set
+				? 4 : FMath::Clamp(static_cast<int32>(Item.Quality), 0, 3);
 			++QualityCounts[QualityIndex];
 			++BaseCounts.FindOrAdd(Item.BaseId);
 		}
@@ -295,8 +330,8 @@ void UROHCheatManager::ROHSimulateDrops(FName TCId, int32 Count)
 	CheatPrint(FString::Printf(TEXT("=== 드랍 시뮬레이션: %s × %d회 ==="), *TCId.ToString(), Count));
 	CheatPrint(FString::Printf(TEXT("아이템 %d개 (%.1f%%) | 골드 드랍 %d회, 평균 %.1f"),
 		TotalItems, 100.f * TotalItems / Count, GoldDrops, GoldDrops > 0 ? static_cast<float>(TotalGold) / GoldDrops : 0.f));
-	CheatPrint(FString::Printf(TEXT("등급: 일반 %d / 매직 %d / 레어 %d"),
-		QualityCounts[0], QualityCounts[1], QualityCounts[2]));
+	CheatPrint(FString::Printf(TEXT("등급: 일반 %d / 매직 %d / 레어 %d / 유니크 %d / 세트 %d"),
+		QualityCounts[0], QualityCounts[1], QualityCounts[2], QualityCounts[3], QualityCounts[4]));
 	for (const auto& Pair : BaseCounts)
 	{
 		CheatPrint(FString::Printf(TEXT("  %s: %d"), *Pair.Key.ToString(), Pair.Value));
@@ -819,5 +854,92 @@ void UROHCheatManager::ROHSocket(int32 ItemIndex, int32 RuneItemIndex)
 	else
 	{
 		CheatPrint(FString::Printf(TEXT("소켓 실패: %s"), *Error));
+	}
+}
+
+void UROHCheatManager::ROHSalvage(int32 ItemIndex)
+{
+	if (UROHInventoryComponent* Inventory = GetPlayerInventory(this))
+	{
+		FString Message;
+		Inventory->SalvageUnique(ItemIndex, Message);
+		CheatPrint(Message);
+	}
+}
+
+void UROHCheatManager::ROHForgeAncient(int32 ItemIndex)
+{
+	if (UROHInventoryComponent* Inventory = GetPlayerInventory(this))
+	{
+		FString Message;
+		Inventory->ForgeAncient(ItemIndex, Message);
+		CheatPrint(Message);
+	}
+}
+
+void UROHCheatManager::ROHUniques()
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	if (!Database)
+	{
+		return;
+	}
+
+	CheatPrint(TEXT("=== 유니크 15종 (드랍 1%+MF | 분해: ROHSalvage → 고대 합성: ROHForgeAncient) ==="));
+	for (const FROHUniqueDef& Unique : Database->GetUniques())
+	{
+		const FROHItemBaseDef* Base = Database->FindBase(Unique.BaseId);
+		TArray<FString> BonusParts;
+		for (const FROHRunewordBonus& Bonus : Unique.Bonuses)
+		{
+			BonusParts.Add(FString::Printf(TEXT("%s +%.0f"), *Bonus.Attribute.GetName(), Bonus.Value));
+		}
+		if (Unique.RunePower > 0.f)
+		{
+			BonusParts.Add(FString::Printf(TEXT("룬위력 +%.0f%%"), Unique.RunePower));
+		}
+		CheatPrint(FString::Printf(TEXT("%s (%s, ilvl %d+): %s"),
+			*Unique.DisplayName.ToString(),
+			Base ? *Base->DisplayName.ToString() : *Unique.BaseId.ToString(),
+			Unique.RequiredItemLevel, *FString::Join(BonusParts, TEXT(", "))));
+	}
+}
+
+void UROHCheatManager::ROHSets()
+{
+	UROHItemDatabase* Database = GetDatabase(this);
+	if (!Database)
+	{
+		return;
+	}
+
+	CheatPrint(TEXT("=== 세트 4종 (드랍 1.5%+MF | 장착 피스 수만큼 보너스 누적) ==="));
+	for (const FROHSetDef& Set : Database->GetSets())
+	{
+		CheatPrint(FString::Printf(TEXT("[%s] (ilvl %d+, %d피스)"),
+			*Set.DisplayName.ToString(), Set.RequiredItemLevel, Set.Pieces.Num()));
+		for (const FROHSetPieceDef& Piece : Set.Pieces)
+		{
+			const FROHItemBaseDef* Base = Database->FindBase(Piece.BaseId);
+			CheatPrint(FString::Printf(TEXT("  - %s (%s)"),
+				*Piece.DisplayName.ToString(), Base ? *Base->DisplayName.ToString() : *Piece.BaseId.ToString()));
+		}
+		// 임계 오름차순 출력
+		TArray<int32> Thresholds;
+		Set.CountBonuses.GetKeys(Thresholds);
+		Thresholds.Sort();
+		for (const int32 Threshold : Thresholds)
+		{
+			TArray<FString> BonusParts;
+			for (const FROHRunewordBonus& Bonus : Set.CountBonuses[Threshold])
+			{
+				BonusParts.Add(FString::Printf(TEXT("%s +%.0f"), *Bonus.Attribute.GetName(), Bonus.Value));
+			}
+			CheatPrint(FString::Printf(TEXT("  %d피스: %s"), Threshold, *FString::Join(BonusParts, TEXT(", "))));
+		}
+		if (Set.FullSetRunePower > 0.f)
+		{
+			CheatPrint(FString::Printf(TEXT("  풀세트: 룬위력 +%.0f%%"), Set.FullSetRunePower));
+		}
 	}
 }

@@ -27,6 +27,8 @@ void UROHItemDatabase::BuildDefaultData()
 	TreasureClasses.Reset();
 	Runes.Reset();
 	Runewords.Reset();
+	Uniques.Reset();
+	Sets.Reset();
 
 	// ---------- 베이스 아이템 ----------
 	auto AddBase = [this](FName Id, const TCHAR* Name, EROHItemKind Kind, EROHEquipSlot Slot,
@@ -57,6 +59,7 @@ void UROHItemDatabase::BuildDefaultData()
 	AddBase("ChainMail",    TEXT("사슬갑옷"), EROHItemKind::Equipment, EROHEquipSlot::Chest,  0.f, 0.f, 30.f, 6, 0.f, 120);
 	AddBase("LeatherBoots", TEXT("가죽장화"), EROHItemKind::Equipment, EROHEquipSlot::Boots,  0.f, 0.f, 5.f, 1, 0.f, 20);
 	AddBase("HealthPotion", TEXT("치유물약"), EROHItemKind::Potion,    EROHEquipSlot::None,   0.f, 0.f, 0.f, 1, 60.f, 50);
+	AddBase("SaintRelic",   TEXT("성유물 조각"), EROHItemKind::Material, EROHEquipSlot::None, 0.f, 0.f, 0.f, 1, 0.f, 100); // 유니크 분해 재료 (M5 2차)
 
 	// ---------- 룬 12종 (M5 — docs/06 아자크론의 33 룬 봉인 중 발굴된 12종) ----------
 	// 소켓 보너스(단일 어트리뷰트) + 룬 위력(티어×0.5%, 최종 피해 곱연산 합산원 — docs/10 §5.2)
@@ -142,6 +145,191 @@ void UROHItemDatabase::BuildDefaultData()
 	AddRuneword("Carnage",  TEXT("학살"), EROHEquipSlot::Weapon, { "Kar", "Bel", "Azak" },
 		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 20.f),
 		  RB(UROHAttributeSet::GetCritDamageAttribute(), 30.f) }, 8.f);
+
+	// ---------- 유니크 15종 (M5 2차 — 아자크론 세계관의 순교/타락 성인 무구, docs/06) ----------
+	// 접사 대신 고정 옵션, 소켓 없음 (룬워드와 축 분리). 분해 → 성유물 조각 → 고대 합성 (×1.5, 룬위력 +3)
+	auto AddUnique = [this](FName Id, const TCHAR* Name, FName BaseId, int32 ReqIlvl,
+		std::initializer_list<FROHRunewordBonus> Bonuses, float RunePower)
+	{
+		FROHUniqueDef Def;
+		Def.UniqueId = Id;
+		Def.DisplayName = FText::FromString(Name);
+		Def.BaseId = BaseId;
+		Def.RequiredItemLevel = ReqIlvl;
+		Def.Bonuses = Bonuses;
+		Def.RunePower = RunePower;
+		Uniques.Add(Def);
+	};
+
+	// 하급 (ilvl 1+) — 순교 초기의 성인들
+	AddUnique("StRahal",  TEXT("성 라할의 대검"),     "ShortSword",   1,
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 8.f),
+		  RB(UROHAttributeSet::GetAttackRatingAttribute(), 30.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 3.f) }, 0.f);
+	AddUnique("StMirne",  TEXT("성 미르네의 서약"),   "Buckler",      1,
+		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 30.f),
+		  RB(UROHAttributeSet::GetDefenseAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetFireResistanceAttribute(), 10.f) }, 0.f);
+	AddUnique("StCassian",TEXT("성 카시안의 장막"),   "LeatherArmor", 1,
+		{ RB(UROHAttributeSet::GetDefenseAttribute(), 20.f),
+		  RB(UROHAttributeSet::GetShadowResistanceAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetMoveSpeedAttribute(), 20.f) }, 0.f);
+	AddUnique("StObel",   TEXT("성 오벨의 관"),       "Cap",          1,
+		{ RB(UROHAttributeSet::GetMaxManaAttribute(), 25.f),
+		  RB(UROHAttributeSet::GetEnergyAttribute(), 5.f),
+		  RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 8.f) }, 0.f);
+	AddUnique("StIven",   TEXT("성 이벤의 걸음"),     "LeatherBoots", 1,
+		{ RB(UROHAttributeSet::GetMoveSpeedAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetDexterityAttribute(), 5.f),
+		  RB(UROHAttributeSet::GetColdResistanceAttribute(), 10.f) }, 0.f);
+
+	// 중급 (ilvl 6+) — 봉인 전쟁기의 성인들
+	AddUnique("StJudith", TEXT("성 유디트의 최후"),   "BattleAxe",    6,
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetCritDamageAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 10.f) }, 0.f);
+	AddUnique("StHelos",  TEXT("성 헬로스의 보루"),   "RoundShield",  6,
+		{ RB(UROHAttributeSet::GetDefenseAttribute(), 35.f),
+		  RB(UROHAttributeSet::GetMaxHealthAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetPhysicalResistanceAttribute(), 5.f) }, 0.f); // PDR (docs/10 §4.3)
+	AddUnique("StMorwen", TEXT("성 모르웬의 응시"),   "FullHelm",     6,
+		{ RB(UROHAttributeSet::GetAttackRatingAttribute(), 60.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 5.f),
+		  RB(UROHAttributeSet::GetMagicFindAttribute(), 20.f) }, 0.f);
+	AddUnique("StKassel", TEXT("성 카셀의 심장"),     "ChainMail",    6,
+		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 60.f),
+		  RB(UROHAttributeSet::GetHealthRegenAttribute(), 3.f),
+		  RB(UROHAttributeSet::GetFireResistanceAttribute(), 10.f),
+		  RB(UROHAttributeSet::GetColdResistanceAttribute(), 10.f) }, 0.f);
+	AddUnique("StVeyra",  TEXT("성 베이라의 속삭임"), "ShortSword",   6,
+		{ RB(UROHAttributeSet::GetEnergyAttribute(), 8.f),
+		  RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 12.f),
+		  RB(UROHAttributeSet::GetLightningResistanceAttribute(), 10.f) }, 0.f);
+
+	// 상급 (ilvl 12+) — 타락 직전의 마지막 성인들 (룬 위력 부여)
+	AddUnique("StRakhom", TEXT("성 라콤의 분노"),     "BattleAxe",    12,
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 25.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 6.f),
+		  RB(UROHAttributeSet::GetCritDamageAttribute(), 50.f) }, 8.f);
+	AddUnique("StElara",  TEXT("성 엘라라의 성벽"),   "RoundShield",  12,
+		{ RB(UROHAttributeSet::GetDefenseAttribute(), 50.f),
+		  RB(UROHAttributeSet::GetMaxHealthAttribute(), 50.f),
+		  RB(UROHAttributeSet::GetShadowResistanceAttribute(), 15.f) }, 3.f);
+	AddUnique("StNoctis", TEXT("성 녹티스의 면갑"),   "FullHelm",     12,
+		{ RB(UROHAttributeSet::GetMaxManaAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetCritChanceAttribute(), 4.f),
+		  RB(UROHAttributeSet::GetMagicFindAttribute(), 25.f) }, 4.f);
+	AddUnique("StSerin",  TEXT("성 세린의 갑주"),     "ChainMail",    12,
+		{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 80.f),
+		  RB(UROHAttributeSet::GetDefenseAttribute(), 40.f),
+		  RB(UROHAttributeSet::GetHealthRegenAttribute(), 4.f) }, 5.f);
+	AddUnique("StAvelo",  TEXT("성 아벨로의 낙인"),   "ShortSword",   12,
+		{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 20.f),
+		  RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 15.f),
+		  RB(UROHAttributeSet::GetAttackRatingAttribute(), 80.f) }, 6.f);
+
+	// ---------- 세트 4종 (M5 2차 — 고대 유적지 테마, 장착 조합 보너스가 본체) ----------
+	auto MakePiece = [](FName PieceId, const TCHAR* Name, FName BaseId, std::initializer_list<FROHRunewordBonus> Bonuses)
+	{
+		FROHSetPieceDef Piece;
+		Piece.PieceId = PieceId;
+		Piece.DisplayName = FText::FromString(Name);
+		Piece.BaseId = BaseId;
+		Piece.Bonuses = Bonuses;
+		return Piece;
+	};
+
+	{
+		// ① 저레벨 3피스: 근접 입문 세트
+		FROHSetDef Spire;
+		Spire.SetId = "AshenSpire";
+		Spire.DisplayName = FText::FromString(TEXT("잿빛 첨탑"));
+		Spire.RequiredItemLevel = 1;
+		Spire.Pieces.Add(MakePiece("SpireBlade", TEXT("잿빛 첨탑의 파수검"), "ShortSword",
+			{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 4.f), RB(UROHAttributeSet::GetAttackRatingAttribute(), 15.f) }));
+		Spire.Pieces.Add(MakePiece("SpireCrown", TEXT("잿빛 첨탑의 관모"), "Cap",
+			{ RB(UROHAttributeSet::GetMaxManaAttribute(), 10.f) }));
+		Spire.Pieces.Add(MakePiece("SpireVest", TEXT("잿빛 첨탑의 예복"), "LeatherArmor",
+			{ RB(UROHAttributeSet::GetDefenseAttribute(), 10.f) }));
+		Spire.CountBonuses.Add(2, { RB(UROHAttributeSet::GetMaxHealthAttribute(), 20.f) });
+		Spire.CountBonuses.Add(3, { RB(UROHAttributeSet::GetFireResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetColdResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetLightningResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetPoisonResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetShadowResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetAttackPowerAttribute(), 6.f) });
+		Spire.FullSetRunePower = 0.f;
+		Sets.Add(Spire);
+	}
+	{
+		// ② 저레벨 2피스: 생존 소세트
+		FROHSetDef Grave;
+		Grave.SetId = "SunkenGrave";
+		Grave.DisplayName = FText::FromString(TEXT("가라앉은 묘역"));
+		Grave.RequiredItemLevel = 1;
+		Grave.Pieces.Add(MakePiece("GraveWall", TEXT("가라앉은 묘역의 패방패"), "Buckler",
+			{ RB(UROHAttributeSet::GetDefenseAttribute(), 8.f), RB(UROHAttributeSet::GetMaxHealthAttribute(), 10.f) }));
+		Grave.Pieces.Add(MakePiece("GraveTread", TEXT("가라앉은 묘역의 장화"), "LeatherBoots",
+			{ RB(UROHAttributeSet::GetMoveSpeedAttribute(), 15.f) }));
+		Grave.CountBonuses.Add(2, { RB(UROHAttributeSet::GetMaxHealthAttribute(), 25.f),
+			RB(UROHAttributeSet::GetColdResistanceAttribute(), 15.f) });
+		Grave.FullSetRunePower = 0.f;
+		Sets.Add(Grave);
+	}
+	{
+		// ③ 고레벨 5피스: 풀슬롯 최종 지향 세트
+		FROHSetDef Remains;
+		Remains.SetId = "AzakronRemains";
+		Remains.DisplayName = FText::FromString(TEXT("아자크론의 잔해"));
+		Remains.RequiredItemLevel = 10;
+		Remains.Pieces.Add(MakePiece("RemainsAxe", TEXT("아자크론 잔해의 파쇄도끼"), "BattleAxe",
+			{ RB(UROHAttributeSet::GetAttackPowerAttribute(), 10.f), RB(UROHAttributeSet::GetCritChanceAttribute(), 2.f) }));
+		Remains.Pieces.Add(MakePiece("RemainsShield", TEXT("아자크론 잔해의 수호방패"), "RoundShield",
+			{ RB(UROHAttributeSet::GetDefenseAttribute(), 20.f) }));
+		Remains.Pieces.Add(MakePiece("RemainsHelm", TEXT("아자크론 잔해의 철관"), "FullHelm",
+			{ RB(UROHAttributeSet::GetAttackRatingAttribute(), 30.f) }));
+		Remains.Pieces.Add(MakePiece("RemainsMail", TEXT("아자크론 잔해의 갑주"), "ChainMail",
+			{ RB(UROHAttributeSet::GetMaxHealthAttribute(), 30.f) }));
+		Remains.Pieces.Add(MakePiece("RemainsGreaves", TEXT("아자크론 잔해의 군화"), "LeatherBoots",
+			{ RB(UROHAttributeSet::GetMoveSpeedAttribute(), 20.f) }));
+		Remains.CountBonuses.Add(2, { RB(UROHAttributeSet::GetMaxHealthAttribute(), 30.f) });
+		Remains.CountBonuses.Add(3, { RB(UROHAttributeSet::GetFireResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetColdResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetLightningResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetPoisonResistanceAttribute(), 10.f),
+			RB(UROHAttributeSet::GetShadowResistanceAttribute(), 10.f) });
+		Remains.CountBonuses.Add(4, { RB(UROHAttributeSet::GetAttackPowerAttribute(), 15.f),
+			RB(UROHAttributeSet::GetDefenseAttribute(), 40.f) });
+		Remains.CountBonuses.Add(5, { RB(UROHAttributeSet::GetCritChanceAttribute(), 5.f),
+			RB(UROHAttributeSet::GetCritDamageAttribute(), 30.f),
+			RB(UROHAttributeSet::GetAttackSpeedPctAttribute(), 10.f) });
+		Remains.FullSetRunePower = 10.f;
+		Sets.Add(Remains);
+	}
+	{
+		// ④ 고레벨 3피스: 캐스터 지향
+		FROHSetDef Altar;
+		Altar.SetId = "SilentAltar";
+		Altar.DisplayName = FText::FromString(TEXT("침묵의 제단"));
+		Altar.RequiredItemLevel = 10;
+		Altar.Pieces.Add(MakePiece("AltarBlade", TEXT("침묵 제단의 의식검"), "ShortSword",
+			{ RB(UROHAttributeSet::GetEnergyAttribute(), 6.f), RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 8.f) }));
+		Altar.Pieces.Add(MakePiece("AltarCrown", TEXT("침묵 제단의 성문관"), "Cap",
+			{ RB(UROHAttributeSet::GetMaxManaAttribute(), 20.f), RB(UROHAttributeSet::GetManaRegenAttribute(), 1.f) }));
+		Altar.Pieces.Add(MakePiece("AltarRobe", TEXT("침묵 제단의 제의복"), "LeatherArmor",
+			{ RB(UROHAttributeSet::GetDefenseAttribute(), 15.f), RB(UROHAttributeSet::GetEnergyAttribute(), 4.f) }));
+		Altar.CountBonuses.Add(2, { RB(UROHAttributeSet::GetMaxManaAttribute(), 30.f),
+			RB(UROHAttributeSet::GetCastSpeedPctAttribute(), 10.f) });
+		Altar.CountBonuses.Add(3, { RB(UROHAttributeSet::GetEnergyAttribute(), 10.f),
+			RB(UROHAttributeSet::GetManaRegenAttribute(), 2.f),
+			RB(UROHAttributeSet::GetFireResistanceAttribute(), 8.f),
+			RB(UROHAttributeSet::GetColdResistanceAttribute(), 8.f),
+			RB(UROHAttributeSet::GetLightningResistanceAttribute(), 8.f),
+			RB(UROHAttributeSet::GetPoisonResistanceAttribute(), 8.f),
+			RB(UROHAttributeSet::GetShadowResistanceAttribute(), 8.f) });
+		Altar.FullSetRunePower = 4.f;
+		Sets.Add(Altar);
+	}
 
 	// ---------- 접사 풀 ----------
 	auto AddAffix = [this](FName Id, const TCHAR* Name, bool bPrefix, FGameplayAttribute Attr,
@@ -243,8 +431,55 @@ void UROHItemDatabase::BuildDefaultData()
 		TreasureClasses.Add(BossTC.TCId, BossTC);
 	}
 
-	UE_LOG(LogROH, Log, TEXT("ItemDatabase: 베이스 %d, 접사 %d, TC %d, 룬 %d, 룬워드 %d 등록"),
-		Bases.Num(), Affixes.Num(), TreasureClasses.Num(), Runes.Num(), Runewords.Num());
+	UE_LOG(LogROH, Log, TEXT("ItemDatabase: 베이스 %d, 접사 %d, TC %d, 룬 %d, 룬워드 %d, 유니크 %d, 세트 %d 등록"),
+		Bases.Num(), Affixes.Num(), TreasureClasses.Num(), Runes.Num(), Runewords.Num(), Uniques.Num(), Sets.Num());
+}
+
+const FROHSetDef* UROHItemDatabase::FindSet(FName SetId) const
+{
+	for (const FROHSetDef& Def : Sets)
+	{
+		if (Def.SetId == SetId)
+		{
+			return &Def;
+		}
+	}
+	return nullptr;
+}
+
+const FROHSetPieceDef* UROHItemDatabase::FindSetPiece(FName PieceId, const FROHSetDef** OutSet) const
+{
+	for (const FROHSetDef& Def : Sets)
+	{
+		for (const FROHSetPieceDef& Piece : Def.Pieces)
+		{
+			if (Piece.PieceId == PieceId)
+			{
+				if (OutSet)
+				{
+					*OutSet = &Def;
+				}
+				return &Piece;
+			}
+		}
+	}
+	if (OutSet)
+	{
+		*OutSet = nullptr;
+	}
+	return nullptr;
+}
+
+const FROHUniqueDef* UROHItemDatabase::FindUnique(FName UniqueId) const
+{
+	for (const FROHUniqueDef& Def : Uniques)
+	{
+		if (Def.UniqueId == UniqueId)
+		{
+			return &Def;
+		}
+	}
+	return nullptr;
 }
 
 const FROHRuneDef* UROHItemDatabase::FindRune(FName RuneId) const
@@ -332,15 +567,26 @@ EROHItemQuality UROHItemDatabase::RollQuality(int32 ItemLevel, float MagicFind, 
 	// MF 체감 곡선 (디아블로2 방식): 실효 MF = MF × 250 / (MF + 250)
 	const float EffectiveMF = MagicFind > 0.f ? MagicFind * 250.f / (MagicFind + 250.f) : 0.f;
 
+	// M5 2차 밴드 순서: 유니크 → 세트 → 레어 → 매직 (FRand 1회)
+	const float UniqueChance = 0.01f * (1.f + EffectiveMF / 100.f);
+	const float SetChance = 0.015f * (1.f + EffectiveMF / 100.f);
 	const float RareChance = 0.05f * (1.f + EffectiveMF / 100.f);
 	const float MagicChance = 0.20f * (1.f + EffectiveMF / 100.f);
 
 	const float Roll = Rng.FRand();
-	if (Roll < RareChance)
+	if (Roll < UniqueChance)
+	{
+		return EROHItemQuality::Unique;
+	}
+	if (Roll < UniqueChance + SetChance)
+	{
+		return EROHItemQuality::Set;
+	}
+	if (Roll < UniqueChance + SetChance + RareChance)
 	{
 		return EROHItemQuality::Rare;
 	}
-	if (Roll < RareChance + MagicChance)
+	if (Roll < UniqueChance + SetChance + RareChance + MagicChance)
 	{
 		return EROHItemQuality::Magic;
 	}
@@ -367,6 +613,53 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 	if (Base->Kind == EROHItemKind::Equipment)
 	{
 		FRandomStream Rng(Instance.Seed);
+
+		// 유니크 (M5 2차): 베이스+ilvl 충족 후보에서 1개 선택 — 접사/소켓 없음 (고정 옵션이 대체)
+		if (Instance.Quality == EROHItemQuality::Unique)
+		{
+			TArray<const FROHUniqueDef*> Candidates;
+			for (const FROHUniqueDef& Def : Uniques)
+			{
+				if (Def.BaseId == Instance.BaseId && Instance.ItemLevel >= Def.RequiredItemLevel)
+				{
+					Candidates.Add(&Def);
+				}
+			}
+			if (Candidates.Num() > 0)
+			{
+				Instance.UniqueId = Candidates[Rng.RandRange(0, Candidates.Num() - 1)]->UniqueId;
+				return Instance;
+			}
+			// 후보 없음 → 레어 강등 (강등 판정은 스트림 미소비 — 기존 등급 경로의 소비 순서 불변)
+			Instance.Quality = EROHItemQuality::Rare;
+		}
+
+		// 세트 (M5 2차): 유니크와 동일 규칙 — 베이스+ilvl 적합 피스 선택, 접사/소켓 없음
+		if (Instance.Quality == EROHItemQuality::Set)
+		{
+			TArray<const FROHSetPieceDef*> PieceCandidates;
+			for (const FROHSetDef& SetDef : Sets)
+			{
+				if (Instance.ItemLevel < SetDef.RequiredItemLevel)
+				{
+					continue;
+				}
+				for (const FROHSetPieceDef& Piece : SetDef.Pieces)
+				{
+					if (Piece.BaseId == Instance.BaseId)
+					{
+						PieceCandidates.Add(&Piece);
+					}
+				}
+			}
+			if (PieceCandidates.Num() > 0)
+			{
+				Instance.SetPieceId = PieceCandidates[Rng.RandRange(0, PieceCandidates.Num() - 1)]->PieceId;
+				return Instance;
+			}
+			Instance.Quality = EROHItemQuality::Rare;
+		}
+
 		// 접사 먼저 소비 → 소켓: 기존 시드의 접사 재현성 유지 (테스트 ROH.Loot 3번 항목)
 		if (Instance.Quality != EROHItemQuality::Normal)
 		{
@@ -585,6 +878,26 @@ FText UROHItemDatabase::GetItemDisplayName(const FROHItemInstance& Instance) con
 		return FText::FromString(TEXT("???"));
 	}
 
+	// 유니크/고대 (M5 2차): 성인 무구 고유명, 고대는 "[고대]" 접두
+	if (!Instance.UniqueId.IsNone())
+	{
+		if (const FROHUniqueDef* Unique = FindUnique(Instance.UniqueId))
+		{
+			return Instance.Quality == EROHItemQuality::Ancient
+				? FText::Format(NSLOCTEXT("ROH", "AncientItemName", "[고대] {0}"), Unique->DisplayName)
+				: Unique->DisplayName;
+		}
+	}
+
+	// 세트 피스 (M5 2차): 유적지 고유명 ("잿빛 첨탑의 파수검")
+	if (!Instance.SetPieceId.IsNone())
+	{
+		if (const FROHSetPieceDef* Piece = FindSetPiece(Instance.SetPieceId))
+		{
+			return Piece->DisplayName;
+		}
+	}
+
 	// 룬워드 완성품: "[룬워드] 베이스"
 	if (!Instance.RunewordId.IsNone())
 	{
@@ -611,12 +924,15 @@ FText UROHItemDatabase::GetItemDisplayName(const FROHItemInstance& Instance) con
 
 FColor UROHItemDatabase::GetQualityColor(EROHItemQuality Quality)
 {
+	// 소유자 확정 팔레트: 흰 일반 / 파랑 매직 / 노랑 레어 / 초록 세트 / 금 유니크 / 자주 룬워드 / 진홍 고대
 	switch (Quality)
 	{
-	case EROHItemQuality::Magic:    return FColor(80, 120, 255);
-	case EROHItemQuality::Rare:     return FColor(255, 220, 60);
-	case EROHItemQuality::Unique:   return FColor(200, 160, 80);
-	case EROHItemQuality::Runeword: return FColor(255, 140, 40);
+	case EROHItemQuality::Magic:    return FColor(100, 150, 255);
+	case EROHItemQuality::Rare:     return FColor(255, 255, 0);
+	case EROHItemQuality::Set:      return FColor(80, 220, 80);
+	case EROHItemQuality::Unique:   return FColor(255, 200, 60);
+	case EROHItemQuality::Runeword: return FColor(160, 60, 220);
+	case EROHItemQuality::Ancient:  return FColor(220, 60, 60);
 	default:                        return FColor::White;
 	}
 }

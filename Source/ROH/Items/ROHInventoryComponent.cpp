@@ -84,6 +84,7 @@ bool UROHInventoryComponent::EquipItemByIndex(int32 ItemIndex)
 
 	Equipped.Add(Base->Slot, ItemToEquip);
 	ApplyEquipEffect(Base->Slot, ItemToEquip);
+	RefreshSetBonuses(); // 장착 조합 변경 (M5 2차 세트)
 	return true;
 }
 
@@ -119,6 +120,7 @@ bool UROHInventoryComponent::UnequipSlot(EROHEquipSlot Slot)
 	RemoveEquipEffect(Slot);
 	Equipped.Remove(Slot);
 	Items.Add(Removed);
+	RefreshSetBonuses(); // 장착 조합 변경 (M5 2차 세트)
 	return true;
 }
 
@@ -184,6 +186,33 @@ void UROHInventoryComponent::ApplyEquipEffect(EROHEquipSlot Slot, const FROHItem
 			TotalRunePower += Runeword->RunePower;
 		}
 	}
+	// 세트 피스 자체 옵션 (M5 2차) — 조합 보너스는 RefreshSetBonuses의 별도 GE가 담당
+	if (!Item.SetPieceId.IsNone())
+	{
+		if (const FROHSetPieceDef* Piece = Database->FindSetPiece(Item.SetPieceId))
+		{
+			for (const FROHRunewordBonus& Bonus : Piece->Bonuses)
+			{
+				AddModifier(Bonus.Attribute, Bonus.Value);
+			}
+		}
+	}
+
+	// 유니크/고대 (M5 2차): 고정 옵션 — 고대는 옵션 ×1.5 + 룬 위력 +3 (DB 실시간 해석)
+	if (!Item.UniqueId.IsNone())
+	{
+		if (const FROHUniqueDef* Unique = Database->FindUnique(Item.UniqueId))
+		{
+			const bool bAncient = (Item.Quality == EROHItemQuality::Ancient);
+			const float BonusMult = bAncient ? UROHItemDatabase::AncientBonusMult : 1.f;
+			for (const FROHRunewordBonus& Bonus : Unique->Bonuses)
+			{
+				AddModifier(Bonus.Attribute, Bonus.Value * BonusMult);
+			}
+			TotalRunePower += Unique->RunePower + (bAncient ? UROHItemDatabase::AncientRunePowerBonus : 0.f);
+		}
+	}
+
 	// 룬 위력 → ×(1 + RunePower/100) 최종 피해 배율 합산원 (docs/10 §5.2)
 	AddModifier(UROHAttributeSet::GetRunePowerAttribute(), TotalRunePower);
 
@@ -202,6 +231,90 @@ void UROHInventoryComponent::RemoveEquipEffect(EROHEquipSlot Slot)
 			ASC->RemoveActiveGameplayEffect(*Handle);
 		}
 		EquipEffectHandles.Remove(Slot);
+	}
+}
+
+void UROHInventoryComponent::RefreshSetBonuses()
+{
+	UAbilitySystemComponent* ASC = GetOwnerASC();
+	UROHItemDatabase* Database = GetDatabase();
+
+	// 기존 세트 보너스 전부 제거 후 현재 조합 기준으로 재구성
+	for (const auto& HandlePair : SetBonusHandles)
+	{
+		if (ASC)
+		{
+			ASC->RemoveActiveGameplayEffect(HandlePair.Value);
+		}
+	}
+	SetBonusHandles.Reset();
+	if (!ASC || !Database)
+	{
+		return;
+	}
+
+	// 세트별 장착 피스 수 집계 (슬롯당 장비 1개라 동일 피스 중복 장착은 구조상 불가)
+	TMap<FName, int32> CountsBySet;
+	for (const auto& EquipPair : Equipped)
+	{
+		if (EquipPair.Value.SetPieceId.IsNone())
+		{
+			continue;
+		}
+		const FROHSetDef* OwningSet = nullptr;
+		if (Database->FindSetPiece(EquipPair.Value.SetPieceId, &OwningSet) && OwningSet)
+		{
+			++CountsBySet.FindOrAdd(OwningSet->SetId);
+		}
+	}
+
+	for (const auto& CountPair : CountsBySet)
+	{
+		const FROHSetDef* Set = Database->FindSet(CountPair.Key);
+		if (!Set)
+		{
+			continue;
+		}
+
+		UGameplayEffect* SetEffect = NewObject<UGameplayEffect>(GetTransientPackage());
+		SetEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+		auto AddModifier = [SetEffect](const FGameplayAttribute& Attribute, float Value)
+		{
+			if (!Attribute.IsValid() || FMath::IsNearlyZero(Value))
+			{
+				return;
+			}
+			FGameplayModifierInfo Modifier;
+			Modifier.Attribute = Attribute;
+			Modifier.ModifierOp = EGameplayModOp::Additive;
+			Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Value));
+			SetEffect->Modifiers.Add(Modifier);
+		};
+
+		// 도달한 임계 보너스 누적 (2피스 도달 시 2, 3피스 도달 시 2+3, …)
+		for (const auto& ThresholdPair : Set->CountBonuses)
+		{
+			if (CountPair.Value >= ThresholdPair.Key)
+			{
+				for (const FROHRunewordBonus& Bonus : ThresholdPair.Value)
+				{
+					AddModifier(Bonus.Attribute, Bonus.Value);
+				}
+			}
+		}
+		// 풀세트 룬 위력 (docs/10 §5.2 합산원)
+		if (CountPair.Value >= Set->Pieces.Num())
+		{
+			AddModifier(UROHAttributeSet::GetRunePowerAttribute(), Set->FullSetRunePower);
+		}
+		if (SetEffect->Modifiers.Num() == 0)
+		{
+			continue;
+		}
+
+		FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+		Context.AddSourceObject(this);
+		SetBonusHandles.Add(CountPair.Key, ASC->ApplyGameplayEffectToSelf(SetEffect, 1.f, Context));
 	}
 }
 
@@ -290,6 +403,100 @@ bool UROHInventoryComponent::SocketRune(int32 ItemIndex, int32 RuneItemIndex, FS
 	return true;
 }
 
+bool UROHInventoryComponent::SalvageUnique(int32 ItemIndex, FString& OutMessage)
+{
+	UROHItemDatabase* Database = GetDatabase();
+	if (!Database || !Items.IsValidIndex(ItemIndex))
+	{
+		OutMessage = TEXT("잘못된 인덱스입니다. ROHDumpInventory로 확인하세요.");
+		return false;
+	}
+	if (Items[ItemIndex].Quality == EROHItemQuality::Ancient)
+	{
+		OutMessage = TEXT("고대 아이템은 분해할 수 없습니다.");
+		return false;
+	}
+	if (Items[ItemIndex].Quality != EROHItemQuality::Unique)
+	{
+		OutMessage = TEXT("유니크만 분해할 수 있습니다.");
+		return false;
+	}
+
+	// 조각 굴림을 먼저 확정하고 공간을 검사 — 파괴 후 조각이 소실되는 일 방지
+	// (분해는 시드 재현이 불필요한 소비성 굴림)
+	const int32 ShardCount = FMath::RandRange(2, 4);
+	if (Capacity - (Items.Num() - 1) < ShardCount)
+	{
+		OutMessage = FString::Printf(TEXT("인벤토리 공간이 부족합니다 (조각 %d개 필요)"), ShardCount);
+		return false;
+	}
+
+	const FString SalvagedName = Database->GetItemDisplayName(Items[ItemIndex]).ToString();
+	Items.RemoveAt(ItemIndex);
+	int32 Granted = 0;
+	for (int32 i = 0; i < ShardCount; ++i)
+	{
+		if (AddItem(Database->GenerateItem(TEXT("SaintRelic"), 1, EROHItemQuality::Normal)))
+		{
+			++Granted;
+		}
+	}
+	OutMessage = FString::Printf(TEXT("분해: %s → 성유물 조각 ×%d"), *SalvagedName, Granted);
+	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
+	return true;
+}
+
+bool UROHInventoryComponent::ForgeAncient(int32 ItemIndex, FString& OutMessage)
+{
+	UROHItemDatabase* Database = GetDatabase();
+	if (!Database || !Items.IsValidIndex(ItemIndex))
+	{
+		OutMessage = TEXT("잘못된 인덱스입니다. ROHDumpInventory로 확인하세요.");
+		return false;
+	}
+	FROHItemInstance& Target = Items[ItemIndex];
+	if (Target.Quality == EROHItemQuality::Ancient)
+	{
+		OutMessage = TEXT("이미 고대 아이템입니다.");
+		return false;
+	}
+	if (Target.Quality != EROHItemQuality::Unique)
+	{
+		OutMessage = TEXT("유니크만 고대로 벼릴 수 있습니다. (장착 중이면 해제 후 시도)");
+		return false;
+	}
+
+	// 성유물 조각 수집
+	TArray<int32> RelicIndices;
+	for (int32 i = 0; i < Items.Num(); ++i)
+	{
+		if (i != ItemIndex && Items[i].BaseId == TEXT("SaintRelic"))
+		{
+			RelicIndices.Add(i);
+		}
+	}
+	if (RelicIndices.Num() < AncientForgeCost)
+	{
+		OutMessage = FString::Printf(TEXT("성유물 조각이 부족합니다 (%d/%d — ROHSalvage로 유니크를 분해하세요)"),
+			RelicIndices.Num(), AncientForgeCost);
+		return false;
+	}
+
+	// 승격 먼저 → 표시명 확보 → 조각 소모 (RemoveAt 이후엔 Target 참조/인덱스가 무효)
+	Target.Quality = EROHItemQuality::Ancient;
+	OutMessage = FString::Printf(TEXT("고대 강림: %s!"), *Database->GetItemDisplayName(Target).ToString());
+	for (int32 Consumed = 0; Consumed < AncientForgeCost; ++Consumed)
+	{
+		Items.RemoveAt(RelicIndices[RelicIndices.Num() - 1 - Consumed]); // 뒤 인덱스부터
+	}
+	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor(220, 60, 60), OutMessage);
+	}
+	return true;
+}
+
 void UROHInventoryComponent::ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const
 {
 	OutItems = Items;
@@ -321,6 +528,8 @@ void UROHInventoryComponent::RestoreState(const TArray<FROHItemInstance>& InItem
 			Items.Pop();
 		}
 	}
+	// 복원 장비가 없어도(전부 해제 상태 세이브) 잔존 세트 보너스가 남지 않게 최종 재계산
+	RefreshSetBonuses();
 }
 
 void UROHInventoryComponent::AddGold(int32 Amount)

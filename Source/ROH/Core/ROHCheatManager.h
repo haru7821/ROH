@@ -127,4 +127,22 @@ public:
 	/** 인벤토리 장비에 룬 소켓. 예: ROHSocket 0 3 (0=장비 인덱스, 3=룬 인덱스) */
 	UFUNCTION(Exec)
 	void ROHSocket(int32 ItemIndex, int32 RuneItemIndex);
+
+	// --- M5 2차 유니크/고대 ---
+
+	/** 유니크 분해 → 성유물 조각 2~4개 (고대는 분해 불가) */
+	UFUNCTION(Exec)
+	void ROHSalvage(int32 ItemIndex);
+
+	/** 고대 합성: 인벤토리의 유니크 + 성유물 조각 5개 → 고대 승격 */
+	UFUNCTION(Exec)
+	void ROHForgeAncient(int32 ItemIndex);
+
+	/** 유니크 15종 목록 출력 */
+	UFUNCTION(Exec)
+	void ROHUniques();
+
+	/** 세트 4종 목록 출력 (피스 구성/보너스 임계) */
+	UFUNCTION(Exec)
+	void ROHSets();
 };

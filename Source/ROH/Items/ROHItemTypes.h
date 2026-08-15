@@ -5,15 +5,17 @@
 #include "AttributeSet.h"
 #include "ROHItemTypes.generated.h"
 
-/** 아이템 등급 (docs/02 §3.1) */
+/** 아이템 등급 (docs/02 §3.1). 세이브 바이트 호환을 위해 새 값은 반드시 말미에 추가 */
 UENUM(BlueprintType)
 enum class EROHItemQuality : uint8
 {
-	Normal,   // 흰색 — 접사 없음, M5에서 룬워드 베이스
+	Normal,   // 흰색 — 접사 없음, 룬워드 베이스
 	Magic,    // 파란색 — 접두 1 + 접미 1
 	Rare,     // 노란색 — 접사 3~6
-	Unique,   // 금색 — M5
-	Runeword  // 주황색 — M5
+	Unique,   // 금색 — 고정 옵션 15종 (M5 2차)
+	Runeword, // 자주색 — 일반템 소켓 완성
+	Ancient,  // 진홍색 — 유니크 승격 (성유물 조각 합성, M5 2차)
+	Set       // 초록색 — 고대 유적지 세트 (M5 2차, 장착 조합 보너스)
 };
 
 UENUM(BlueprintType)
@@ -32,7 +34,8 @@ enum class EROHItemKind : uint8
 {
 	Equipment,
 	Potion,
-	Rune // M5: 소켓/룬워드 재료 (인벤토리 보관형, 장착 불가)
+	Rune,    // M5: 소켓/룬워드 재료 (인벤토리 보관형, 장착 불가)
+	Material // M5 2차: 제작 재료 (성유물 조각 등)
 };
 
 /** 베이스 아이템 정의 (데이터 주도 — M2는 C++ 기본 데이터, 추후 DataTable 애셋으로 이관 가능) */
@@ -167,6 +170,14 @@ struct FROHItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	FName RunewordId;
 
+	/** 유니크 정의 ID (M5 2차 — None = 유니크 아님). 고정 옵션은 장착 시 DB에서 해석 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	FName UniqueId;
+
+	/** 세트 피스 ID (M5 2차 — None = 세트 아님). 세트 보너스는 장착 조합에서 실시간 산출 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	FName SetPieceId;
+
 	bool IsValid() const { return !BaseId.IsNone(); }
 };
 
@@ -203,6 +214,43 @@ struct FROHRunewordDef
 	TArray<FName> RuneSequence;
 	TArray<FROHRunewordBonus> Bonuses;
 	float RunePower = 0.f;
+};
+
+/**
+ * 유니크 정의 (M5 2차): 성인(Saint)의 이름을 딴 고정 옵션 장비 15종.
+ * 접사/소켓 대신 Bonuses가 전부 — 분해(성유물 조각) → 고대(Ancient) 합성 재료 축.
+ */
+struct FROHUniqueDef
+{
+	FName UniqueId;
+	FText DisplayName;
+	FName BaseId;
+	int32 RequiredItemLevel = 1;
+	TArray<FROHRunewordBonus> Bonuses;
+	float RunePower = 0.f;
+};
+
+/** 세트 피스 (M5 2차): 자체 옵션은 유니크보다 약하게 — 본체는 세트 보너스 */
+struct FROHSetPieceDef
+{
+	FName PieceId;
+	FText DisplayName;
+	FName BaseId;
+	TArray<FROHRunewordBonus> Bonuses;
+};
+
+/**
+ * 세트 정의 (M5 2차): 고대 유적지 이름의 장비 세트 (디아블로2 방식).
+ * CountBonuses[N] = 장착 피스 N개 도달 시 보너스 (임계 누적 적용), 풀세트에 RunePower.
+ */
+struct FROHSetDef
+{
+	FName SetId;
+	FText DisplayName;
+	int32 RequiredItemLevel = 1;
+	TArray<FROHSetPieceDef> Pieces;
+	TMap<int32, TArray<FROHRunewordBonus>> CountBonuses;
+	float FullSetRunePower = 0.f;
 };
 
 UENUM(BlueprintType)

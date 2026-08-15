@@ -38,6 +38,20 @@ public:
 	/** 룬워드 완성 검사 (일반 등급 + 슬롯 + 소켓 수 + 룬 순서 일치). 미완성이면 null */
 	const FROHRunewordDef* MatchRuneword(const FROHItemInstance& Item) const;
 
+	// --- 유니크/고대 (M5 2차) ---
+	const FROHUniqueDef* FindUnique(FName UniqueId) const;
+	const TArray<FROHUniqueDef>& GetUniques() const { return Uniques; }
+
+	// --- 세트 (M5 2차, 고대 유적지 테마) ---
+	const FROHSetDef* FindSet(FName SetId) const;
+	/** 피스 ID로 피스 정의 조회. OutSet에 소속 세트 반환 (null 허용) */
+	const FROHSetPieceDef* FindSetPiece(FName PieceId, const FROHSetDef** OutSet = nullptr) const;
+	const TArray<FROHSetDef>& GetSets() const { return Sets; }
+
+	/** 고대 보정: 유니크 고정 옵션 ×1.5, 룬 위력 +3 (ROHForgeAncient) */
+	static constexpr float AncientBonusMult = 1.5f;
+	static constexpr float AncientRunePowerBonus = 3.f;
+
 	/** 등급 판정: 매직파인드(MF)는 체감 곡선 적용 (docs/02 §3.4) */
 	EROHItemQuality RollQuality(int32 ItemLevel, float MagicFind, FRandomStream& Rng) const;
 
@@ -64,7 +78,9 @@ private:
 	TMap<FName, FROHAffixDef> Affixes;
 	TMap<FName, FROHTreasureClassDef> TreasureClasses;
 
-	/** 룬 12종 (인덱스 = 티어-1) / 룬워드 8종 — 코드 레지스트리 (M5) */
+	/** 룬 12종 (인덱스 = 티어-1) / 룬워드 8종 / 유니크 15종 / 세트 4종 — 코드 레지스트리 (M5) */
 	TArray<FROHRuneDef> Runes;
 	TArray<FROHRunewordDef> Runewords;
+	TArray<FROHUniqueDef> Uniques;
+	TArray<FROHSetDef> Sets;
 };
