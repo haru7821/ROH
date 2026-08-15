@@ -1,6 +1,8 @@
 #include "World/ROHWaypoint.h"
 #include "Campaign/ROHCampaignSubsystem.h"
 #include "Character/ROHPlayerCharacter.h"
+#include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Materials/MaterialInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -63,18 +65,34 @@ void AROHWaypoint::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 기둥 메시 로드 (생성자 시점엔 엔진 콘텐츠 미마운트 — CharacterBase와 동일 사유)
+	// 기둥 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — CharacterBase와 동일 사유):
+	// 카탈로그(SM_Waypoint) 우선, 없으면 기존 그레이박스 기둥 그대로 (b32)
 	if (PillarMesh && !PillarMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* Mesh = LoadWaypointPillarMesh())
+		static const FName WaypointCatalogKey(TEXT("SM_Waypoint"));
+		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(WaypointCatalogKey);
+		const bool bCatalogMesh = Mesh != nullptr;
+		if (!Mesh)
+		{
+			Mesh = LoadWaypointPillarMesh();
+		}
+
+		if (Mesh)
 		{
 			PillarMesh->SetStaticMesh(Mesh);
-			// 메시 종류와 무관하게 가늘고 긴 기둥으로 정규화 (반경 30, 높이 300)
+			// 메시 종류와 무관하게 가늘고 긴 기둥으로 정규화 (반경 30, 높이 300 — 카탈로그 메시도 동일)
 			const FVector Extent = Mesh->GetBounds().BoxExtent;
 			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
 			{
 				PillarMesh->SetRelativeScale3D(FVector(30.f / Extent.X, 30.f / Extent.Y, 150.f / Extent.Z));
 				PillarMesh->SetRelativeLocation(FVector(0.f, 0.f, 150.f));
+			}
+			if (bCatalogMesh)
+			{
+				if (UMaterialInterface* OverrideMaterial = ROHAssetCatalog::LoadMaterialForMeshKey(WaypointCatalogKey))
+				{
+					PillarMesh->SetMaterial(0, OverrideMaterial);
+				}
 			}
 		}
 		else

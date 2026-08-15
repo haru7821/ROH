@@ -112,6 +112,10 @@ class ROH_API AROHMonster_Grunt : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Grunt();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Grunt"); }
 };
 
 /** 사수: 거리를 유지하며 투사체를 쏘는 원거리 몬스터 */
@@ -122,6 +126,10 @@ class ROH_API AROHMonster_Archer : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Archer();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Archer"); }
 };
 
 /** 돌격병: 빠르고 아프지만 물렁한 몬스터 */
@@ -132,6 +140,10 @@ class ROH_API AROHMonster_Charger : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Charger();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Charger"); }
 };
 
 /** 덩치: 느리고 단단한 근접 탱커 */
@@ -142,6 +154,10 @@ class ROH_API AROHMonster_Brute : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Brute();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Brute"); }
 };
 
 /** 주술사: 사수보다 유리 몸이지만 공격이 아픈 원거리 술사 */
@@ -152,6 +168,10 @@ class ROH_API AROHMonster_Hexer : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Hexer();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Hexer"); }
 };
 
 /** 추적자: 매우 빠르게 파고드는 측면 기습형 */
@@ -162,4 +182,8 @@ class ROH_API AROHMonster_Stalker : public AROHMonsterCharacter
 
 public:
 	AROHMonster_Stalker();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Monster_Stalker"); }
 };

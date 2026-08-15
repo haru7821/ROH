@@ -1,4 +1,6 @@
 #include "World/ROHTownNpc.h"
+#include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Materials/MaterialInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
@@ -27,6 +29,21 @@ namespace
 			}
 		}
 		return nullptr;
+	}
+
+	// 역할 → 카탈로그 키 (b32, docs/13 — enum 이름 기반 표기)
+	FName NpcCatalogMeshKey(EROHNpcRole Role)
+	{
+		switch (Role)
+		{
+		case EROHNpcRole::General:      return TEXT("SM_Npc_General");
+		case EROHNpcRole::Blacksmith:   return TEXT("SM_Npc_Blacksmith");
+		case EROHNpcRole::Jeweler:      return TEXT("SM_Npc_Jeweler");
+		case EROHNpcRole::PotionVendor: return TEXT("SM_Npc_PotionVendor");
+		case EROHNpcRole::Gambler:      return TEXT("SM_Npc_Gambler");
+		case EROHNpcRole::Identifier:   return TEXT("SM_Npc_Identifier");
+		default:                        return NAME_None;
+		}
 	}
 }
 
@@ -81,18 +98,35 @@ void AROHTownNpc::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 기둥 메시 로드 (생성자 시점엔 엔진 콘텐츠 미마운트 — 웨이포인트와 동일 사유)
+	// 기둥 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — 웨이포인트와 동일 사유):
+	// 역할별 카탈로그(SM_Npc_<역할>) 우선, 없으면 기존 그레이박스 기둥 그대로 (b32).
+	// 역할은 지연 스폰 중(FinishSpawning 전) SetNpcInfo로 주입되므로 BeginPlay 시점엔 확정 상태.
 	if (PillarMesh && !PillarMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* Mesh = LoadNpcPillarMesh())
+		const FName NpcCatalogKey = NpcCatalogMeshKey(NpcRole);
+		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(NpcCatalogKey);
+		const bool bCatalogMesh = Mesh != nullptr;
+		if (!Mesh)
+		{
+			Mesh = LoadNpcPillarMesh();
+		}
+
+		if (Mesh)
 		{
 			PillarMesh->SetStaticMesh(Mesh);
-			// 웨이포인트(반경 30/높이 300)보다 낮은 사람 크기 기둥: 반경 30, 높이 220
+			// 웨이포인트(반경 30/높이 300)보다 낮은 사람 크기 기둥: 반경 30, 높이 220 — 카탈로그 메시도 동일
 			const FVector Extent = Mesh->GetBounds().BoxExtent;
 			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
 			{
 				PillarMesh->SetRelativeScale3D(FVector(30.f / Extent.X, 30.f / Extent.Y, 110.f / Extent.Z));
 				PillarMesh->SetRelativeLocation(FVector(0.f, 0.f, 110.f));
+			}
+			if (bCatalogMesh)
+			{
+				if (UMaterialInterface* OverrideMaterial = ROHAssetCatalog::LoadMaterialForMeshKey(NpcCatalogKey))
+				{
+					PillarMesh->SetMaterial(0, OverrideMaterial);
+				}
 			}
 		}
 		else

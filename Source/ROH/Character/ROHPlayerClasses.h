@@ -12,6 +12,10 @@ class ROH_API AROHWarriorCharacter : public AROHPlayerCharacter
 
 public:
 	AROHWarriorCharacter();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Player_Warrior"); }
 };
 
 /** 원소술사: 마나 자원, 원거리 마법 (docs/02 §1.2) */
@@ -22,4 +26,8 @@ class ROH_API AROHElementalistCharacter : public AROHPlayerCharacter
 
 public:
 	AROHElementalistCharacter();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Player_Elementalist"); }
 };

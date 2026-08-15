@@ -3,6 +3,8 @@
 #include "Abilities/ROHGameplayAbility.h"
 #include "Character/ROHAttributeSet.h"
 #include "Character/ROHMonsterCharacter.h"
+#include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Materials/MaterialInterface.h"
 #include "ROHGameplayTags.h"
 #include "GameplayEffect.h" // b29 % 배율 무한 GE 구성
 #include "GameplayEffectTypes.h"
@@ -69,18 +71,40 @@ void AROHCharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 그레이박스 비주얼 메시 로드 (생성자 시점엔 엔진 콘텐츠 미마운트)
+	// 비주얼 메시 로드 (생성자 시점엔 콘텐츠 미마운트 — BeginPlay에서 수행):
+	// 애셋 카탈로그 우선 (M6 1차, b32 — 임포트만 하면 교체), 없으면 기존 그레이박스 그대로
 	if (VisualMesh && !VisualMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* BodyMesh = LoadGrayboxBodyMesh())
+		UStaticMesh* BodyMesh = nullptr;
+		bool bCatalogMesh = false;
+		const FName CatalogKey = GetCatalogMeshKey();
+		if (!CatalogKey.IsNone())
+		{
+			BodyMesh = ROHAssetCatalog::LoadMesh(CatalogKey);
+			bCatalogMesh = BodyMesh != nullptr;
+		}
+		if (!BodyMesh)
+		{
+			BodyMesh = LoadGrayboxBodyMesh();
+		}
+
+		if (BodyMesh)
 		{
 			VisualMesh->SetStaticMesh(BodyMesh);
-			// 메시 종류와 무관하게 캡슐 크기에 맞춰 정규화 (바닥 파묻힘 방지)
+			// 메시 종류와 무관하게 캡슐 크기에 맞춰 정규화 (바닥 파묻힘 방지 — 카탈로그 메시도 동일 적용)
 			const FVector Extent = BodyMesh->GetBounds().BoxExtent;
 			const float TargetHalfHeight = GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
 			{
 				VisualMesh->SetRelativeScale3D(FVector(40.f / Extent.X, 40.f / Extent.Y, TargetHalfHeight / Extent.Z));
+			}
+			// 머티리얼 오버라이드는 카탈로그 메시 적용 성공 시에만 (M_<키 몸통>)
+			if (bCatalogMesh)
+			{
+				if (UMaterialInterface* OverrideMaterial = ROHAssetCatalog::LoadMaterialForMeshKey(CatalogKey))
+				{
+					VisualMesh->SetMaterial(0, OverrideMaterial);
+				}
 			}
 		}
 		else

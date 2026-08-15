@@ -1,4 +1,6 @@
 #include "World/ROHStashChest.h"
+#include "Core/ROHAssetCatalog.h" // 카탈로그 메시 우선 적용 (b32)
+#include "Materials/MaterialInterface.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/Engine.h"
@@ -46,17 +48,33 @@ void AROHStashChest::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// 카탈로그(SM_StashChest) 우선, 없으면 기존 그레이박스 상자 그대로 (b32)
 	if (ChestMesh && !ChestMesh->GetStaticMesh())
 	{
-		if (UStaticMesh* Mesh = LoadChestMesh())
+		static const FName ChestCatalogKey(TEXT("SM_StashChest"));
+		UStaticMesh* Mesh = ROHAssetCatalog::LoadMesh(ChestCatalogKey);
+		const bool bCatalogMesh = Mesh != nullptr;
+		if (!Mesh)
+		{
+			Mesh = LoadChestMesh();
+		}
+
+		if (Mesh)
 		{
 			ChestMesh->SetStaticMesh(Mesh);
-			// 낮은 상자: 60×60×50 (기둥 NPC/웨이포인트와 실루엣 구분)
+			// 낮은 상자: 60×60×50 (기둥 NPC/웨이포인트와 실루엣 구분 — 카탈로그 메시도 동일 정규화)
 			const FVector Extent = Mesh->GetBounds().BoxExtent;
 			if (Extent.GetMin() > KINDA_SMALL_NUMBER)
 			{
 				ChestMesh->SetRelativeScale3D(FVector(30.f / Extent.X, 30.f / Extent.Y, 25.f / Extent.Z));
 				ChestMesh->SetRelativeLocation(FVector(0.f, 0.f, 25.f));
+			}
+			if (bCatalogMesh)
+			{
+				if (UMaterialInterface* OverrideMaterial = ROHAssetCatalog::LoadMaterialForMeshKey(ChestCatalogKey))
+				{
+					ChestMesh->SetMaterial(0, OverrideMaterial);
+				}
 			}
 		}
 		else

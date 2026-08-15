@@ -24,6 +24,9 @@ protected:
 	/** 빙의 시 SpecialAbility 부여 (평타는 부모가 부여) */
 	virtual void PossessedBy(AController* NewController) override;
 
+	/** 애셋 카탈로그 키 (b32 — docs/13). 베이스 클래스 = 발타르 */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Boss_Baltar"); }
+
 	/** 화면 보스 HP 표시용 이름 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Boss")
 	FText BossName;
@@ -69,4 +72,8 @@ class ROH_API AROHBossMorgath : public AROHBossCharacter
 
 public:
 	AROHBossMorgath();
+
+protected:
+	/** 애셋 카탈로그 키 (b32 — docs/13) */
+	virtual FName GetCatalogMeshKey() const override { return TEXT("SM_Boss_Morgath"); }
 };

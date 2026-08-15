@@ -57,6 +57,13 @@ protected:
 
 	void InitAbilityActorInfo();
 
+	/**
+	 * 애셋 카탈로그 메시 키 (M6 1차 — b32): 서브클래스가 자기 키를 반환하면 BeginPlay가
+	 * "/Game/ROH/Art/<키>" 임포트 애셋을 우선 적용한다. NAME_None(기본) = 카탈로그 건너뜀.
+	 * 애셋이 없으면 기존 그레이박스 캡슐 폴백 그대로.
+	 */
+	virtual FName GetCatalogMeshKey() const { return NAME_None; }
+
 	/** 기본 스탯 프로퍼티를 어트리뷰트에 반영. 파생 공식 포함 (docs/10 §2) */
 	virtual void InitializeAttributes();
 
