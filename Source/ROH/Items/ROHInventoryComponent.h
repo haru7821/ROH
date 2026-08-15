@@ -77,6 +77,12 @@ public:
 	bool SpendGold(int32 Amount);
 	int32 GetGold() const { return Gold; }
 
+	/**
+	 * 변경 버전 (UI 3차 — b31): 아이템/장착/골드/감정 등 모든 변이 성공 시 증가.
+	 * 열린 창의 dirty 폴링용 — int 비교만으로 재구성 여부를 판단한다 (델리게이트 수명 함정 회피).
+	 */
+	int32 GetChangeSerial() const { return ChangeSerial; }
+
 	const TArray<FROHItemInstance>& GetItems() const { return Items; }
 	const TMap<EROHEquipSlot, FROHItemInstance>& GetEquipped() const { return Equipped; }
 	bool IsFull() const { return Items.Num() >= Capacity; }
@@ -104,6 +110,9 @@ protected:
 	int32 Capacity = 40;
 
 private:
+	/** 변이 성공 지점 말단에서 호출 (b31 — 중복 호출 무해: 단조 증가만 보장하면 됨) */
+	void MarkChanged() { ++ChangeSerial; }
+
 	UPROPERTY()
 	TArray<FROHItemInstance> Items;
 
@@ -116,4 +125,7 @@ private:
 	TMap<FName, FActiveGameplayEffectHandle> SetBonusHandles;
 
 	int32 Gold = 0;
+
+	/** 변경 버전 (b31 — dirty 폴링) */
+	int32 ChangeSerial = 0;
 };

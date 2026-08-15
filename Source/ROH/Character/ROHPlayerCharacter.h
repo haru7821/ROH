@@ -37,6 +37,9 @@ public:
 	/** 로드용: 저장된 슬롯 배치 재적용 (스킬트리 복원 후 호출 — 랭크 검증 통과 필요) */
 	void RestoreBoundSkills(const TArray<FName>& SkillIds);
 
+	/** 스킬바 HUD 표시용 (b31): 슬롯의 어빌리티 클래스 (0=기본공격, 1~4=스킬). 없으면 null */
+	TSubclassOf<UROHGameplayAbility> GetSlotAbilityClass(int32 SlotIndex) const;
+
 	static constexpr int32 MaxSkillSlot = 4;
 
 	/** E 상호작용: 근처 웨이포인트 = 지역 선택 창 → 주변 드랍 습득 → 인벤토리 첫 장비 장착 */

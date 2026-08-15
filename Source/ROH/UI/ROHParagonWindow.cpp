@@ -21,6 +21,15 @@ namespace
 	}
 }
 
+int32 UROHParagonWindow::ComputeContentSerial() const
+{
+	const AROHPlayerCharacter* Player = GetPlayerCharacter();
+	const UROHProgressionComponent* Progression = Player ? Player->GetProgression() : nullptr;
+	const UROHAccountSubsystem* Account = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+	return (Account ? Account->GetChangeSerial() : 0) + (Progression ? Progression->GetChangeSerial() : 0);
+}
+
 void UROHParagonWindow::RefreshContents()
 {
 	if (!ContentBox)
@@ -99,7 +108,7 @@ void UROHParagonWindow::OnAction(FName InActionId, int32 InActionIndex)
 			if (Account->AllocateParagonPoint(Categories[InActionIndex], Error)) // 성공 시 내부 즉시 저장
 			{
 				Player->ApplyParagonBonuses(); // 투자 반영 GE 재적용 (치트 ROHParagonUp과 동일)
-				RefreshContents();
+				RefreshNow();
 			}
 			else if (StatusText)
 			{

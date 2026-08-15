@@ -41,6 +41,15 @@ namespace
 	}
 }
 
+int32 UROHStashWindow::ComputeContentSerial() const
+{
+	const AROHPlayerCharacter* Player = GetPlayerCharacter();
+	const UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
+	const UROHAccountSubsystem* Account = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UROHAccountSubsystem>() : nullptr;
+	return (Inventory ? Inventory->GetChangeSerial() : 0) + (Account ? Account->GetChangeSerial() : 0);
+}
+
 void UROHStashWindow::RefreshContents()
 {
 	if (!ContentBox)
@@ -175,7 +184,7 @@ void UROHStashWindow::OnAction(FName InActionId, int32 InActionIndex)
 		}
 	}
 
-	RefreshContents();
+	RefreshNow();
 	if (!Status.IsEmpty() && StatusText)
 	{
 		StatusText->SetText(FText::FromString(Status));

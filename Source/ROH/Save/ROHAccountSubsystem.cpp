@@ -81,6 +81,7 @@ void UROHAccountSubsystem::GrantParagonXP(int32 Amount)
 	}
 
 	ParagonXP += Amount;
+	++ChangeSerial; // b31: 정복자 창 XP 진행 표시 갱신
 	bool bLeveledUp = false;
 	while (ParagonXP >= ParagonXPForNextLevel(ParagonLevel))
 	{
@@ -163,6 +164,7 @@ bool UROHAccountSubsystem::AllocateParagonPoint(FName Category, FString& OutErro
 
 	--ParagonPoints;
 	++Allocated;
+	++ChangeSerial; // b31
 	SaveAccount(); // 계정 데이터는 즉시 저장
 	return true;
 }
@@ -174,6 +176,7 @@ bool UROHAccountSubsystem::StashDeposit(const FROHItemInstance& Item)
 		return false;
 	}
 	StashItems.Add(Item);
+	++ChangeSerial; // b31
 	SaveAccount(); // 계정 데이터는 즉시 저장
 	return true;
 }
@@ -186,6 +189,7 @@ bool UROHAccountSubsystem::StashWithdrawAt(int32 StashIndex, FROHItemInstance& O
 	}
 	OutItem = StashItems[StashIndex];
 	StashItems.RemoveAt(StashIndex);
+	++ChangeSerial; // b31
 	SaveAccount(); // 계정 데이터는 즉시 저장
 	return true;
 }

@@ -78,7 +78,27 @@ void UROHUiWindow::NativeOnInitialized()
 void UROHUiWindow::NativeConstruct()
 {
 	Super::NativeConstruct();
+	RefreshNow();
+}
+
+void UROHUiWindow::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// dirty 폴링 (b31): 창 열림 중 외부 변이(E 습득/골드/레벨업 등) 반영.
+	// 비용은 int 비교뿐 — Serial 불변이면 절대 리빌드하지 않는다 (호버 중 불필요 리빌드 금지)
+	if (ComputeContentSerial() != CachedContentSerial)
+	{
+		RefreshNow();
+	}
+}
+
+void UROHUiWindow::RefreshNow()
+{
 	RefreshContents();
+	// 재구성 결과 기준으로 동기화 (재구성 자체는 데이터를 변이하지 않지만, 액션 경로에서
+	// 변이 → RefreshNow 순서로 호출되므로 여기서 읽어야 직후 틱 중복 리빌드가 없다)
+	CachedContentSerial = ComputeContentSerial();
 }
 
 void UROHUiWindow::OnAction(FName InActionId, int32 InActionIndex)

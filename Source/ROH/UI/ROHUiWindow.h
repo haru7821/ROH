@@ -53,12 +53,27 @@ public:
 	/** 내용 전체 재구성 (열기/동작 후마다 호출) */
 	virtual void RefreshContents() {}
 
+	/**
+	 * 내용 재구성 + Serial 캐시 동기화 (UI 3차 — b31).
+	 * 수동 갱신 경로(NativeConstruct/파생 OnAction)는 RefreshContents 대신 이걸 호출한다 —
+	 * 캐시가 함께 갱신되어 직후 틱의 중복 리빌드를 막는다.
+	 */
+	void RefreshNow();
+
 	/** 소유 컨트롤러에 닫기 요청 */
 	void RequestClose();
 
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
+	/**
+	 * 창이 관심 갖는 데이터의 버전 합 (b31 dirty 폴링): 파생이 인벤토리/프로그레션 등
+	 * 관련 Serial(단조 증가)의 합을 반환한다. 0 반환(기본) = 자동 갱신 없음.
+	 * NativeTick은 int 비교만 수행 — Serial 불변이면 절대 리빌드하지 않는다.
+	 */
+	virtual int32 ComputeContentSerial() const { return 0; }
 
 	/** 파생 창의 타이틀 문자열 */
 	virtual FText GetWindowTitle() const { return FText::GetEmpty(); }
@@ -79,4 +94,7 @@ protected:
 
 private:
 	bool bFrameBuilt = false;
+
+	/** 마지막 재구성 시점의 Serial 캐시 (b31) */
+	int32 CachedContentSerial = 0;
 };

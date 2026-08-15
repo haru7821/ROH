@@ -116,7 +116,13 @@ bool AROHPlayerCharacter::BindSkillToSlot(int32 SlotIndex, FName SkillId, FStrin
 		DefaultAbilities.SetNum(SlotIndex + 1);
 	}
 	DefaultAbilities[SlotIndex] = Def->AbilityClass;
+	SkillTree->BumpChangeSerial(); // b31: 스킬트리 창/스킬바의 배치 표시 자동 갱신
 	return true;
+}
+
+TSubclassOf<UROHGameplayAbility> AROHPlayerCharacter::GetSlotAbilityClass(int32 SlotIndex) const
+{
+	return DefaultAbilities.IsValidIndex(SlotIndex) ? DefaultAbilities[SlotIndex] : nullptr;
 }
 
 TArray<FName> AROHPlayerCharacter::ExportBoundSkills() const

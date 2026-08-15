@@ -25,6 +25,9 @@ protected:
 		return NSLOCTEXT("ROH", "InventoryWindowTitle", "인벤토리 (I)");
 	}
 
+	/** 창 열림 중 E 습득/골드 변화 자동 반영 (b31 dirty 폴링) */
+	virtual int32 ComputeContentSerial() const override;
+
 private:
 	/** 동작 실패 사유 표시줄 (미감정 장착 시도 등 — RefreshContents마다 재생성) */
 	UPROPERTY()

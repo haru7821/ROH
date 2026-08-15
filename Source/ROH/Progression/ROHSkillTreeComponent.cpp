@@ -225,6 +225,7 @@ bool UROHSkillTreeComponent::InvestPoint(FName SkillId, FString& OutError)
 	}
 
 	++HardPoints.FindOrAdd(SkillId);
+	++ChangeSerial; // b31: 창 dirty 폴링
 
 	if (Def->Kind == EROHSkillKind::Passive)
 	{
@@ -267,6 +268,7 @@ int32 UROHSkillTreeComponent::ResetAllPoints()
 
 	RemoveAllPassiveEffects();
 	HardPoints.Empty();
+	++ChangeSerial; // b31
 
 	if (UROHProgressionComponent* Progression = GetProgression())
 	{
@@ -283,6 +285,7 @@ void UROHSkillTreeComponent::RestoreState(const TMap<FName, int32>& InHardPoints
 	// 세이브 로드: 새 폰 기준이라 기존 패시브는 없지만, 재호출 안전을 위해 정리 후 재적용
 	RemoveAllPassiveEffects();
 	HardPoints = InHardPoints;
+	++ChangeSerial; // b31
 
 	for (const FROHSkillDef& Def : GetSkillDefs(PlayerClass))
 	{

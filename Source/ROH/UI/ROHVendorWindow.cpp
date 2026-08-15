@@ -32,6 +32,13 @@ void UROHVendorWindow::SetNpc(AROHTownNpc* InNpc)
 	Npc = InNpc;
 }
 
+int32 UROHVendorWindow::ComputeContentSerial() const
+{
+	const AROHPlayerCharacter* Player = GetPlayerCharacter();
+	const UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
+	return Inventory ? Inventory->GetChangeSerial() : 0;
+}
+
 void UROHVendorWindow::ShowStatus(const FString& Message)
 {
 	if (StatusText)
@@ -382,6 +389,6 @@ void UROHVendorWindow::OnAction(FName InActionId, int32 InActionIndex)
 		return;
 	}
 
-	RefreshContents();
+	RefreshNow();
 	ShowStatus(Status);
 }

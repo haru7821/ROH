@@ -28,7 +28,10 @@ public:
 	int32 GetStatPoints() const { return StatPoints; }
 	int32 GetSkillPoints() const { return SkillPoints; }
 	bool SpendSkillPoint();
-	void RefundSkillPoint() { ++SkillPoints; }
+	void RefundSkillPoint() { ++SkillPoints; ++ChangeSerial; }
+
+	/** 변경 버전 (UI 3차 — b31): XP/레벨/포인트 변이 시 증가. 열린 창의 dirty 폴링용 */
+	int32 GetChangeSerial() const { return ChangeSerial; }
 
 	/** 레벨 L에서 다음 레벨까지 필요한 경험치 */
 	static int32 XPForNextLevel(int32 InLevel);
@@ -52,4 +55,7 @@ private:
 
 	/** 분배 내역 (세이브/로드 시 재적용) */
 	TMap<FName, int32> AllocatedStats;
+
+	/** 변경 버전 (b31 — dirty 폴링) */
+	int32 ChangeSerial = 0;
 };

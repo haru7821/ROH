@@ -128,6 +128,12 @@ public:
 	const TMap<FName, int32>& GetHardPoints() const { return HardPoints; }
 	void RestoreState(const TMap<FName, int32>& InHardPoints);
 
+	/** 변경 버전 (UI 3차 — b31): 투자/리스펙/복원/슬롯 배치 시 증가. 열린 창의 dirty 폴링용 */
+	int32 GetChangeSerial() const { return ChangeSerial; }
+
+	/** 외부 변이 통지 (슬롯 배치 등 — AROHPlayerCharacter::BindSkillToSlot이 호출, b31) */
+	void BumpChangeSerial() { ++ChangeSerial; }
+
 private:
 	class UROHProgressionComponent* GetProgression() const;
 	UAbilitySystemComponent* GetOwnerASC() const;
@@ -144,4 +150,7 @@ private:
 
 	/** 패시브 SkillId → 적용 중인 보정 GE 핸들 */
 	TMap<FName, FActiveGameplayEffectHandle> PassiveEffectHandles;
+
+	/** 변경 버전 (b31 — dirty 폴링) */
+	int32 ChangeSerial = 0;
 };

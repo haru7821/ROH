@@ -28,6 +28,10 @@ public:
 	/** 감정 비용 (docs/12: 개당 50골드) */
 	static constexpr int32 IdentifyCost = 50;
 
+protected:
+	/** 인벤토리/골드 변이 자동 반영 (b31 — 재고 목록은 갱신 대상 아님: 방문마다 갱신 정책 유지) */
+	virtual int32 ComputeContentSerial() const override;
+
 private:
 	/** 구매 공통: 공간 → 골드 순 검증 후 지급. 결과/사유는 OutStatus */
 	bool TryPurchase(const FROHItemInstance& Item, int32 Price, FString& OutStatus);

@@ -26,6 +26,9 @@ protected:
 		return NSLOCTEXT("ROH", "SkillTreeWindowTitle", "스킬트리 (K)");
 	}
 
+	/** 스킬트리 투자/슬롯 배치 + 레벨업/포인트 변이 자동 반영 (b31 dirty 폴링) */
+	virtual int32 ComputeContentSerial() const override;
+
 private:
 	/** 투자/배치 실패 사유 표시줄 (RefreshContents마다 재생성) */
 	UPROPERTY()

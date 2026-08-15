@@ -56,6 +56,9 @@ public:
 	/** 인출 (제거 + 즉시 저장). 성공 시 OutItem에 사본 */
 	bool StashWithdrawAt(int32 StashIndex, FROHItemInstance& OutItem);
 
+	/** 변경 버전 (UI 3차 — b31): 정복자 XP/투자/스태시 입출금 시 증가. 열린 창의 dirty 폴링용 */
+	int32 GetChangeSerial() const { return ChangeSerial; }
+
 private:
 	// 런타임 사본 (세이브 객체는 저장/로드 시점에만 생성)
 	int32 ParagonLevel = 0;
@@ -67,4 +70,7 @@ private:
 
 	UPROPERTY()
 	TArray<FROHItemInstance> StashItems;
+
+	/** 변경 버전 (b31 — dirty 폴링) */
+	int32 ChangeSerial = 0;
 };

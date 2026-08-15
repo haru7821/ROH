@@ -8,6 +8,8 @@
 #include "UI/ROHVendorWindow.h"
 #include "UI/ROHStashWindow.h"
 #include "UI/ROHParagonWindow.h"
+#include "UI/ROHSkillBarWidget.h"
+#include "UI/ROHMinimapWidget.h"
 #include "Blueprint/UserWidget.h" // CreateWidget
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -48,6 +50,29 @@ void AROHPlayerController::BeginPlay()
 	FInputModeGameAndUI InputMode;
 	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
+
+	// 상시 HUD (b31): 하단 스킬바 + 우상단 미니맵 — 창(z=10)보다 낮은 z, HitTestInvisible
+	if (!SkillBarWidget)
+	{
+		SkillBarWidget = CreateWidget<UROHSkillBarWidget>(this, UROHSkillBarWidget::StaticClass());
+		if (SkillBarWidget)
+		{
+			SkillBarWidget->AddToViewport(1);
+		}
+	}
+	if (!MinimapWidget)
+	{
+		MinimapWidget = CreateWidget<UROHMinimapWidget>(this, UROHMinimapWidget::StaticClass());
+		if (MinimapWidget)
+		{
+			MinimapWidget->AddToViewport(1);
+			// 우상단 고정 200×200 (뷰포트 슬롯이 위젯 지오메트리를 결정 — 위젯 내부는 배경+점 그리기만)
+			MinimapWidget->SetAnchorsInViewport(FAnchors(1.f, 0.f));
+			MinimapWidget->SetAlignmentInViewport(FVector2D(1.f, 0.f));
+			MinimapWidget->SetPositionInViewport(FVector2D(-16.f, 16.f), false);
+			MinimapWidget->SetDesiredSizeInViewport(FVector2D(200.f, 200.f));
+		}
+	}
 }
 
 void AROHPlayerController::BuildRuntimeInput()

@@ -42,6 +42,10 @@ public:
 	virtual const FGameplayTagContainer* GetCooldownTags() const override;
 	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const override;
 
+	// --- 스킬바 HUD 조회용 (b31 — CDO에서 읽는다) ---
+	const FGameplayAttribute& GetCostAttribute() const { return CostAttribute; }
+	float GetCostAmount() const { return CostAmount; }
+
 protected:
 	AROHCharacterBase* GetROHCharacter() const;
 

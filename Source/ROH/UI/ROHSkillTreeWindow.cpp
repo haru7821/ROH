@@ -7,6 +7,14 @@
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 
+int32 UROHSkillTreeWindow::ComputeContentSerial() const
+{
+	const AROHPlayerCharacter* Player = GetPlayerCharacter();
+	const UROHSkillTreeComponent* SkillTree = Player ? Player->GetSkillTree() : nullptr;
+	const UROHProgressionComponent* Progression = Player ? Player->GetProgression() : nullptr;
+	return (SkillTree ? SkillTree->GetChangeSerial() : 0) + (Progression ? Progression->GetChangeSerial() : 0);
+}
+
 void UROHSkillTreeWindow::RefreshContents()
 {
 	if (!ContentBox)
@@ -99,7 +107,7 @@ void UROHSkillTreeWindow::OnAction(FName InActionId, int32 InActionIndex)
 		FString Error;
 		if (SkillTree->InvestPoint(Defs[InActionIndex].SkillId, Error))
 		{
-			RefreshContents();
+			RefreshNow();
 		}
 		else
 		{
@@ -116,7 +124,7 @@ void UROHSkillTreeWindow::OnAction(FName InActionId, int32 InActionIndex)
 		FString Error;
 		if (Player->BindSkillToSlot(SlotNumber, Defs[InActionIndex].SkillId, Error))
 		{
-			RefreshContents();
+			RefreshNow();
 		}
 		else
 		{

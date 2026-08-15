@@ -43,6 +43,7 @@ bool UROHInventoryComponent::AddItem(const FROHItemInstance& Item)
 		return false;
 	}
 	Items.Add(Item);
+	MarkChanged();
 	return true;
 }
 
@@ -53,6 +54,7 @@ bool UROHInventoryComponent::RemoveItemAt(int32 ItemIndex)
 		return false;
 	}
 	Items.RemoveAt(ItemIndex);
+	MarkChanged();
 	return true;
 }
 
@@ -91,6 +93,7 @@ bool UROHInventoryComponent::EquipItemByIndex(int32 ItemIndex)
 	Equipped.Add(Base->Slot, ItemToEquip);
 	ApplyEquipEffect(Base->Slot, ItemToEquip);
 	RefreshSetBonuses(); // 장착 조합 변경 (M5 2차 세트)
+	MarkChanged();
 	return true;
 }
 
@@ -127,6 +130,7 @@ bool UROHInventoryComponent::UnequipSlot(EROHEquipSlot Slot)
 	Equipped.Remove(Slot);
 	Items.Add(Removed);
 	RefreshSetBonuses(); // 장착 조합 변경 (M5 2차 세트)
+	MarkChanged();
 	return true;
 }
 
@@ -322,6 +326,7 @@ bool UROHInventoryComponent::UsePotionAt(int32 ItemIndex)
 	}
 	ASC->ApplyModToAttribute(UROHAttributeSet::GetHealthAttribute(), EGameplayModOp::Additive, Base->PotionHealAmount);
 	Items.RemoveAt(ItemIndex);
+	MarkChanged();
 	return true;
 }
 
@@ -381,6 +386,7 @@ bool UROHInventoryComponent::SocketRune(int32 ItemIndex, int32 RuneItemIndex, FS
 
 	// 룬 소모는 마지막에 — RemoveAt이 Target 참조를 무효화할 수 있으므로 수정 완료 후 제거
 	Items.RemoveAt(RuneItemIndex);
+	MarkChanged();
 	return true;
 }
 
@@ -429,6 +435,7 @@ bool UROHInventoryComponent::SalvageUnique(int32 ItemIndex, FString& OutMessage)
 	}
 	OutMessage = FString::Printf(TEXT("분해: %s → 성유물 조각 ×%d"), *SalvagedName, Granted);
 	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
+	MarkChanged();
 	return true;
 }
 
@@ -485,6 +492,7 @@ bool UROHInventoryComponent::ForgeAncient(int32 ItemIndex, FString& OutMessage)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 6.f, FColor(220, 60, 60), OutMessage);
 	}
+	MarkChanged();
 	return true;
 }
 
@@ -577,6 +585,7 @@ bool UROHInventoryComponent::GambleWithGems(FString& OutMessage, bool& bOutAncie
 		OutMessage = FString::Printf(TEXT("도박 결과: %s"), *ResultName);
 	}
 	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
+	MarkChanged();
 	return true;
 }
 
@@ -587,6 +596,7 @@ bool UROHInventoryComponent::IdentifyItemAt(int32 ItemIndex)
 		return false;
 	}
 	Items[ItemIndex].bUnidentified = false;
+	MarkChanged();
 	return true;
 }
 
@@ -600,6 +610,10 @@ int32 UROHInventoryComponent::IdentifyAll()
 			Item.bUnidentified = false;
 			++Identified;
 		}
+	}
+	if (Identified > 0)
+	{
+		MarkChanged();
 	}
 	return Identified;
 }
@@ -650,11 +664,13 @@ void UROHInventoryComponent::RestoreState(const TArray<FROHItemInstance>& InItem
 	}
 	// 복원 장비가 없어도(전부 해제 상태 세이브) 잔존 세트 보너스가 남지 않게 최종 재계산
 	RefreshSetBonuses();
+	MarkChanged();
 }
 
 void UROHInventoryComponent::AddGold(int32 Amount)
 {
 	Gold = FMath::Max(0, Gold + Amount);
+	MarkChanged();
 }
 
 bool UROHInventoryComponent::SpendGold(int32 Amount)
@@ -664,5 +680,6 @@ bool UROHInventoryComponent::SpendGold(int32 Amount)
 		return false;
 	}
 	Gold -= Amount;
+	MarkChanged();
 	return true;
 }

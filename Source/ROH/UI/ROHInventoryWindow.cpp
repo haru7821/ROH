@@ -52,6 +52,13 @@ namespace
 	}
 }
 
+int32 UROHInventoryWindow::ComputeContentSerial() const
+{
+	const AROHPlayerCharacter* Player = GetPlayerCharacter();
+	const UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
+	return Inventory ? Inventory->GetChangeSerial() : 0;
+}
+
 void UROHInventoryWindow::RefreshContents()
 {
 	if (!ContentBox)
@@ -166,7 +173,7 @@ void UROHInventoryWindow::OnAction(FName InActionId, int32 InActionIndex)
 	if (InActionId == TEXT("Unequip") && Inventory)
 	{
 		Inventory->UnequipSlot(static_cast<EROHEquipSlot>(InActionIndex));
-		RefreshContents();
+		RefreshNow();
 		return;
 	}
 	if (InActionId == TEXT("Item") && Inventory && Database)
@@ -188,7 +195,7 @@ void UROHInventoryWindow::OnAction(FName InActionId, int32 InActionIndex)
 		{
 			Inventory->UsePotionAt(InActionIndex);
 		}
-		RefreshContents();
+		RefreshNow();
 		if (!FailReason.IsEmpty() && StatusText)
 		{
 			StatusText->SetText(FText::FromString(FailReason));

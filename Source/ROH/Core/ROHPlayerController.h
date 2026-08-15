@@ -7,6 +7,8 @@
 class UInputMappingContext;
 class UInputAction;
 class UROHUiWindow;
+class UROHSkillBarWidget;
+class UROHMinimapWidget;
 class AROHTownNpc;
 
 /** UI 창 종류 (동시에 1개만 — ToggleUiWindow / 벤더는 OpenVendorWindow 전용) */
@@ -131,6 +133,13 @@ private:
 	/** 현재 열린 UI 창 (GC 보호). 동시에 1개만 */
 	UPROPERTY()
 	TObjectPtr<UROHUiWindow> CurrentWindow;
+
+	// --- 상시 HUD (b31 — 창(z=10)보다 아래, GC 보호) ---
+	UPROPERTY()
+	TObjectPtr<UROHSkillBarWidget> SkillBarWidget;
+
+	UPROPERTY()
+	TObjectPtr<UROHMinimapWidget> MinimapWidget;
 
 	EROHUiWindowKind CurrentWindowKind = EROHUiWindowKind::None;
 };

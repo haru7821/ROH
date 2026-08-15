@@ -26,6 +26,9 @@ protected:
 		return NSLOCTEXT("ROH", "StashWindowTitle", "계정 보관함");
 	}
 
+	/** 인벤토리+계정 스태시 변이 자동 반영 (b31 dirty 폴링 — 둘 다 단조 증가라 합산 안전) */
+	virtual int32 ComputeContentSerial() const override;
+
 private:
 	/** 가득 참 등 실패 사유 표시줄 (RefreshContents마다 재생성) */
 	UPROPERTY()

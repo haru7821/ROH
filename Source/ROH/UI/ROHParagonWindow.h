@@ -27,6 +27,9 @@ protected:
 		return NSLOCTEXT("ROH", "ParagonWindowTitle", "정복자 (P)");
 	}
 
+	/** 정복자 XP/포인트 + 레벨업(잠금 해제) 자동 반영 (b31 dirty 폴링) */
+	virtual int32 ComputeContentSerial() const override;
+
 private:
 	/** 투자 실패 사유 표시줄 (RefreshContents마다 재생성) */
 	UPROPERTY()

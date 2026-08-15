@@ -42,13 +42,14 @@ void UROHProgressionComponent::GrantXP(int32 Amount)
 		return;
 	}
 
-	// 만렙: 경험치 전액을 정복자로 (M5 최종 — 계정 공유 성장)
+	// 만렙: 경험치 전액을 정복자로 (M5 최종 — 계정 공유 성장. 계정 Serial은 GrantParagonXP가 증가)
 	if (Level >= MaxLevel)
 	{
 		RouteToParagon(Amount);
 		return;
 	}
 
+	++ChangeSerial; // b31: XP/레벨/포인트 변이 — 창 dirty 폴링
 	XP += Amount;
 	while (Level < MaxLevel && XP >= XPForNextLevel(Level))
 	{
@@ -110,6 +111,7 @@ bool UROHProgressionComponent::SpendSkillPoint()
 		return false;
 	}
 	--SkillPoints;
+	++ChangeSerial; // b31
 	return true;
 }
 
@@ -138,6 +140,7 @@ bool UROHProgressionComponent::AllocateStat(FName StatName)
 	--StatPoints;
 	++AllocatedStats.FindOrAdd(StatName);
 	ApplyStatToAttributes(StatName, 1);
+	++ChangeSerial; // b31
 	return true;
 }
 
@@ -177,6 +180,7 @@ void UROHProgressionComponent::ApplyStatToAttributes(FName StatName, int32 Point
 
 void UROHProgressionComponent::RestoreState(int32 InLevel, int32 InXP, int32 InStatPoints, int32 InSkillPoints, const TMap<FName, int32>& InAllocated)
 {
+	++ChangeSerial; // b31: 로드 반영 — 열린 창 갱신
 	Level = FMath::Clamp(InLevel, 1, MaxLevel);
 	XP = FMath::Max(0, InXP);
 	StatPoints = FMath::Max(0, InStatPoints);
