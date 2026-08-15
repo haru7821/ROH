@@ -57,4 +57,15 @@ public:
 
 	UPROPERTY()
 	int32 Gold = 0;
+
+	// --- 캠페인 (구버전 세이브엔 없음 → 기본값) ---
+	/** EROHDifficulty 값 (0 노말 / 1 악몽 / 2 지옥) */
+	UPROPERTY()
+	uint8 Difficulty = 0;
+
+	UPROPERTY()
+	int32 QuestStage = 0;
+
+	UPROPERTY()
+	int32 QuestKills = 0;
 };

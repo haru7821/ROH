@@ -38,7 +38,10 @@ void UROHGameplayAbility::ApplyCost(const FGameplayAbilitySpecHandle Handle, con
 	}
 	if (UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr)
 	{
+		const float Before = ASC->GetNumericAttribute(CostAttribute);
 		ASC->ApplyModToAttribute(CostAttribute, EGameplayModOp::Additive, -CostAmount);
+		const float After = ASC->GetNumericAttribute(CostAttribute);
+		UE_LOG(LogROH, Verbose, TEXT("ApplyCost: %s %.1f → %.1f (-%.1f)"), *CostAttribute.GetName(), Before, After, CostAmount);
 	}
 }
 
@@ -56,14 +59,30 @@ bool UROHGameplayAbility::CommitAbility(const FGameplayAbilitySpecHandle Handle,
 		return AttributeName;
 	};
 
+	UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
+	const bool bHasCost = CostAttribute.IsValid() && CostAmount > 0.f && ASC;
+	const float CostBefore = bHasCost ? ASC->GetNumericAttribute(CostAttribute) : 0.f;
+
 	if (Super::CommitAbility(Handle, ActorInfo, ActivationInfo, OptionalRelevantTags))
 	{
-		if (bShowFeedback && CostAttribute.IsValid() && CostAmount > 0.f)
+		if (bHasCost)
 		{
-			const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
-			const float Remaining = ASC ? ASC->GetNumericAttribute(CostAttribute) : 0.f;
-			GEngine->AddOnScreenDebugMessage(6, 1.5f, FColor::Silver,
-				FString::Printf(TEXT("%s -%.0f (잔여 %.0f)"), *ResourceName(), CostAmount, Remaining));
+			// 방어: 엔진 커밋 경로에서 비용이 실제로 차감되지 않았으면 직접 차감
+			// (차감 여부를 커밋 전후 값으로 검증 — 원인 추적용 경고 로그 포함)
+			float Remaining = ASC->GetNumericAttribute(CostAttribute);
+			if (FMath::IsNearlyEqual(Remaining, CostBefore))
+			{
+				// base 기준으로 차감 (current 유래 값 사용 시 활성 GE의 current 보정만큼 부풀 수 있음)
+				ASC->SetNumericAttributeBase(CostAttribute, FMath::Max(0.f, ASC->GetNumericAttributeBase(CostAttribute) - CostAmount));
+				Remaining = ASC->GetNumericAttribute(CostAttribute);
+				UE_LOG(LogROH, Warning, TEXT("CommitAbility: ApplyCost 미반영 감지 → 직접 차감 (%s %.1f→%.1f)"),
+					*CostAttribute.GetName(), CostBefore, Remaining);
+			}
+			if (bShowFeedback)
+			{
+				GEngine->AddOnScreenDebugMessage(6, 1.5f, FColor::Silver,
+					FString::Printf(TEXT("%s -%.0f (잔여 %.0f)"), *ResourceName(), CostAmount, Remaining));
+			}
 		}
 		return true;
 	}
@@ -78,7 +97,6 @@ bool UROHGameplayAbility::CommitAbility(const FGameplayAbilitySpecHandle Handle,
 		}
 		else if (!CheckCost(Handle, ActorInfo))
 		{
-			const UAbilitySystemComponent* ASC = ActorInfo ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
 			const float Current = ASC && CostAttribute.IsValid() ? ASC->GetNumericAttribute(CostAttribute) : 0.f;
 			Reason = FString::Printf(TEXT("%s: %s 부족 (%.0f 필요, 현재 %.0f)"),
 				*SkillName, *ResourceName(), CostAmount, Current);

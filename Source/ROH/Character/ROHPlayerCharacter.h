@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/ROHCharacterBase.h"
+#include "GameplayEffectTypes.h" // FActiveGameplayEffectHandle
 #include "ROHPlayerCharacter.generated.h"
 
 class USpringArmComponent;
@@ -44,6 +45,9 @@ public:
 
 	virtual void HandleDeath(AActor* Killer) override;
 
+	/** 현재 난이도의 저항 페널티(악몽 -40/지옥 -100)를 무한 GE로 적용. 난이도 변경 시 재호출 */
+	void ApplyDifficultyResistPenalty();
+
 	UROHInventoryComponent* GetInventory() const { return Inventory; }
 	UROHProgressionComponent* GetProgression() const { return Progression; }
 	UROHSkillTreeComponent* GetSkillTree() const { return SkillTree; }
@@ -65,4 +69,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "ROH|Camera")
 	TObjectPtr<UCameraComponent> Camera;
+
+	virtual void PossessedBy(AController* NewController) override;
+
+private:
+	/** 난이도 저항 페널티 GE 핸들 (재적용 시 제거용) */
+	FActiveGameplayEffectHandle DifficultyPenaltyHandle;
 };

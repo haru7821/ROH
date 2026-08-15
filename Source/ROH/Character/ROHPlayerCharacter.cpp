@@ -9,6 +9,8 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Core/ROHGameMode.h"
+#include "Campaign/ROHCampaignSubsystem.h"
+#include "GameplayEffect.h"
 #include "ROHGameplayTags.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
@@ -16,6 +18,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
 #include "ROH.h"
 
 AROHPlayerCharacter::AROHPlayerCharacter()
@@ -152,6 +155,58 @@ void AROHPlayerCharacter::RestoreBoundSkills(const TArray<FName>& SkillIds)
 	}
 }
 
+void AROHPlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	ApplyDifficultyResistPenalty();
+}
+
+void AROHPlayerCharacter::ApplyDifficultyResistPenalty()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (DifficultyPenaltyHandle.IsValid())
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(DifficultyPenaltyHandle);
+		DifficultyPenaltyHandle = FActiveGameplayEffectHandle();
+	}
+
+	const UROHCampaignSubsystem* Campaign = GetGameInstance()
+		? GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>() : nullptr;
+	if (!Campaign)
+	{
+		return;
+	}
+	const float Penalty = UROHCampaignSubsystem::GetDifficultyParams(Campaign->GetDifficulty()).PlayerResistPenalty;
+	if (FMath::IsNearlyZero(Penalty))
+	{
+		return;
+	}
+
+	// 장비/패시브와 동일 패턴의 런타임 무한 GE (docs/04 M4: 난이도 저항 페널티)
+	UGameplayEffect* PenaltyEffect = NewObject<UGameplayEffect>(GetTransientPackage());
+	PenaltyEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
+	const FGameplayAttribute ResistAttributes[4] = {
+		UROHAttributeSet::GetFireResistanceAttribute(),
+		UROHAttributeSet::GetColdResistanceAttribute(),
+		UROHAttributeSet::GetLightningResistanceAttribute(),
+		UROHAttributeSet::GetPhysicalResistanceAttribute(),
+	};
+	for (const FGameplayAttribute& Attribute : ResistAttributes)
+	{
+		FGameplayModifierInfo Modifier;
+		Modifier.Attribute = Attribute;
+		Modifier.ModifierOp = EGameplayModOp::Additive;
+		Modifier.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(Penalty));
+		PenaltyEffect->Modifiers.Add(Modifier);
+	}
+	DifficultyPenaltyHandle = AbilitySystemComponent->ApplyGameplayEffectToSelf(
+		PenaltyEffect, 1.f, AbilitySystemComponent->MakeEffectContext());
+}
+
 void AROHPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -167,6 +222,13 @@ void AROHPlayerCharacter::Tick(float DeltaSeconds)
 				Progression->GetLevel(), *XPText,
 				Progression->GetStatPoints(), Progression->GetSkillPoints(),
 				Inventory ? Inventory->GetGold() : 0));
+
+		// 난이도/퀘스트 목표 표시 (세 번째 줄)
+		if (const UROHCampaignSubsystem* Campaign = GetGameInstance()
+			? GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>() : nullptr)
+		{
+			GEngine->AddOnScreenDebugMessage(8, 0.5f, FColor::Emerald, Campaign->GetObjectiveText());
+		}
 	}
 }
 

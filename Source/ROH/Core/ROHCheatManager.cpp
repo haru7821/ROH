@@ -6,6 +6,7 @@
 #include "Character/ROHPlayerCharacter.h"
 #include "Character/ROHPlayerClasses.h"
 #include "Character/ROHBossCharacter.h"
+#include "Campaign/ROHCampaignSubsystem.h"
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Save/ROHSaveSubsystem.h"
@@ -441,7 +442,7 @@ void UROHCheatManager::ROHSetClass(FString ClassName)
 	}
 }
 
-void UROHCheatManager::ROHSpawnBoss()
+void UROHCheatManager::ROHSpawnBoss(FString Which)
 {
 	const APlayerController* PC = GetOuterAPlayerController();
 	const APawn* PlayerPawn = PC ? PC->GetPawn() : nullptr;
@@ -450,17 +451,66 @@ void UROHCheatManager::ROHSpawnBoss()
 		return;
 	}
 
+	const bool bMorgath = Which.StartsWith(TEXT("2")) || Which.StartsWith(TEXT("mor"), ESearchCase::IgnoreCase);
+	const TSubclassOf<AROHBossCharacter> BossClass = bMorgath
+		? TSubclassOf<AROHBossCharacter>(AROHBossMorgath::StaticClass())
+		: TSubclassOf<AROHBossCharacter>(AROHBossCharacter::StaticClass());
+
 	const FVector SpawnLocation = PlayerPawn->GetActorLocation() + PlayerPawn->GetActorForwardVector() * 800.f + FVector(0.f, 0.f, 50.f);
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	if (GetWorld()->SpawnActor<AROHBossCharacter>(AROHBossCharacter::StaticClass(), SpawnLocation, FRotator::ZeroRotator, SpawnParams))
+	if (GetWorld()->SpawnActor<AROHBossCharacter>(BossClass, SpawnLocation, FRotator::ZeroRotator, SpawnParams))
 	{
-		CheatPrint(TEXT("보스 발타르 소환 — 빨간 장판(내려찍기)은 밖으로 피하세요"));
+		CheatPrint(bMorgath
+			? TEXT("액트 보스 모르가스 소환 — 화염탄 3연발은 좌우로 피하고, 하수인부터 정리하세요")
+			: TEXT("보스 발타르 소환 — 빨간 장판(내려찍기)은 밖으로 피하세요"));
 	}
 	else
 	{
 		CheatPrint(TEXT("보스 소환 실패 (공간 부족)"));
 	}
+}
+
+void UROHCheatManager::ROHSetDifficulty(FString Name)
+{
+	UROHCampaignSubsystem* Campaign = GetWorld() && GetWorld()->GetGameInstance()
+		? GetWorld()->GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>() : nullptr;
+	if (!Campaign)
+	{
+		return;
+	}
+
+	EROHDifficulty NewDifficulty;
+	if (Name.StartsWith(TEXT("nor"), ESearchCase::IgnoreCase))
+	{
+		NewDifficulty = EROHDifficulty::Normal;
+	}
+	else if (Name.StartsWith(TEXT("night"), ESearchCase::IgnoreCase) || Name.StartsWith(TEXT("악몽")))
+	{
+		NewDifficulty = EROHDifficulty::Nightmare;
+	}
+	else if (Name.StartsWith(TEXT("hell"), ESearchCase::IgnoreCase) || Name.StartsWith(TEXT("지옥")))
+	{
+		NewDifficulty = EROHDifficulty::Hell;
+	}
+	else
+	{
+		CheatPrint(TEXT("사용법: ROHSetDifficulty normal | nightmare | hell"));
+		return;
+	}
+
+	Campaign->SetDifficulty(NewDifficulty);
+
+	const APlayerController* PC = GetOuterAPlayerController();
+	if (AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr))
+	{
+		Player->ApplyDifficultyResistPenalty();
+	}
+
+	const FROHDifficultyParams Params = UROHCampaignSubsystem::GetDifficultyParams(NewDifficulty);
+	CheatPrint(FString::Printf(TEXT("난이도: %s (몬스터 생명 x%.1f/피해 x%.1f/경험치 x%.1f, 저항 %+.0f) — 몬스터 강화는 새 스폰부터"),
+		*UROHCampaignSubsystem::GetDifficultyDisplayName(NewDifficulty),
+		Params.HealthMult, Params.DamageMult, Params.XPMult, Params.PlayerResistPenalty));
 }
 
 void UROHCheatManager::ROHSave()

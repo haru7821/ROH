@@ -21,7 +21,7 @@ public:
 	virtual void HandleDamageTaken(float Damage, AActor* InstigatorActor) override;
 
 protected:
-	/** 빙의 시 SlamAbility 부여 (평타는 부모가 부여) */
+	/** 빙의 시 SpecialAbility 부여 (평타는 부모가 부여) */
 	virtual void PossessedBy(AController* NewController) override;
 
 	/** 화면 보스 HP 표시용 이름 */
@@ -30,14 +30,14 @@ protected:
 
 	/** 내려찍기 어빌리티 (주기적으로 발동) */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Boss")
-	TSubclassOf<UROHGameplayAbility> SlamAbility;
+	TSubclassOf<UROHGameplayAbility> SpecialAbility;
 
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Boss")
-	float SlamInterval = 8.f;
+	float SpecialInterval = 8.f;
 
 	/** 대상이 이 거리 안일 때만 내려찍기 시도 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Boss")
-	float SlamTriggerRange = 500.f;
+	float SpecialTriggerRange = 500.f;
 
 	/** 이 비율 이하 생명력에서 1회 광폭화 */
 	UPROPERTY(EditDefaultsOnly, Category = "ROH|Boss")
@@ -54,6 +54,19 @@ protected:
 	float HealthBarVisibleRange = 2500.f;
 
 private:
-	float NextSlamTime = 0.f;
+	float NextSpecialTime = 0.f;
 	bool bEnraged = false;
+};
+
+/**
+ * 액트1 최종 보스 모르가스 (docs/06 §3): 원거리 술사형.
+ * 거리를 유지하며 화염탄을 쏘고, 특수 패턴으로 화염탄 3연발 + 하수인 소환.
+ */
+UCLASS()
+class ROH_API AROHBossMorgath : public AROHBossCharacter
+{
+	GENERATED_BODY()
+
+public:
+	AROHBossMorgath();
 };

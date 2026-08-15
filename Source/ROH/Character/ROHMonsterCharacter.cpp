@@ -1,6 +1,7 @@
 #include "Character/ROHMonsterCharacter.h"
 #include "Abilities/Monster/ROHAbility_MonsterAttack.h"
 #include "Abilities/ROHAbilitySystemComponent.h" // TObjectPtr 멤버 호출에 완전한 타입 필요
+#include "Campaign/ROHCampaignSubsystem.h"
 #include "AI/ROHMonsterAIController.h"
 #include "Character/ROHAttributeSet.h"
 #include "Items/ROHItemDatabase.h"
@@ -32,6 +33,23 @@ void AROHMonsterCharacter::PossessedBy(AController* NewController)
 	{
 		GrantAbility(AttackAbility);
 	}
+
+	// 난이도 스케일링 (어트리뷰트 초기화 이후 1회 — docs/04 M4)
+	if (!bDifficultyScaled && AttributeSet && GetGameInstance())
+	{
+		bDifficultyScaled = true;
+		if (const UROHCampaignSubsystem* Campaign = GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>())
+		{
+			const FROHDifficultyParams Params = UROHCampaignSubsystem::GetDifficultyParams(Campaign->GetDifficulty());
+			AttributeSet->SetMaxHealth(AttributeSet->GetMaxHealth() * Params.HealthMult);
+			AttributeSet->SetHealth(AttributeSet->GetMaxHealth());
+			AttributeSet->SetCharacterLevel(AttributeSet->GetCharacterLevel() + Params.MonsterLevelBonus); // 명중 + 드랍 ilvl
+			AttributeSet->SetAttackRating(AttributeSet->GetAttackRating() * Params.AttackRatingMult);
+			AttributeSet->SetDefense(AttributeSet->GetDefense() * Params.DefenseMult);
+			AttackDamage *= Params.DamageMult;
+			XPValue = FMath::RoundToInt(XPValue * Params.XPMult);
+		}
+	}
 }
 
 void AROHMonsterCharacter::HandleDeath(AActor* Killer)
@@ -48,6 +66,15 @@ void AROHMonsterCharacter::HandleDeath(AActor* Killer)
 		if (UROHProgressionComponent* Progression = KillerCharacter->FindComponentByClass<UROHProgressionComponent>())
 		{
 			Progression->GrantXP(XPValue);
+		}
+	}
+
+	// 퀘스트 진행 집계 (docs/04 M4)
+	if (GetGameInstance())
+	{
+		if (UROHCampaignSubsystem* Campaign = GetGameInstance()->GetSubsystem<UROHCampaignSubsystem>())
+		{
+			Campaign->NotifyMonsterKilled(this, Killer);
 		}
 	}
 

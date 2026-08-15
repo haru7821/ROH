@@ -64,6 +64,9 @@ protected:
 
 private:
 	void DropLoot(AActor* Killer);
+
+	/** 난이도 스케일링은 스폰(빙의) 시 1회만 */
+	bool bDifficultyScaled = false;
 };
 
 /** 졸개: 평균적인 근접 몬스터 */

@@ -1,6 +1,8 @@
 #include "Character/ROHBossCharacter.h"
 #include "Character/ROHAttributeSet.h"
 #include "Abilities/Monster/ROHAbility_BossSlam.h"
+#include "Abilities/Monster/ROHAbility_BossBarrage.h"
+#include "Abilities/Monster/ROHAbility_MonsterAttack.h"
 #include "Abilities/ROHAbilitySystemComponent.h" // TObjectPtr<UROHAbilitySystemComponent> 멤버 호출에 완전한 타입 필요
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -10,7 +12,7 @@
 AROHBossCharacter::AROHBossCharacter()
 {
 	BossName = FText::FromString(TEXT("발타르"));
-	SlamAbility = UROHAbility_BossSlam::StaticClass();
+	SpecialAbility = UROHAbility_BossSlam::StaticClass();
 
 	// 덩치: 일반 몬스터보다 크게 (그레이박스 메시는 캡슐 크기에 맞춰 스케일됨)
 	GetCapsuleComponent()->SetCapsuleSize(60.f, 130.f);
@@ -33,9 +35,9 @@ void AROHBossCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	if (SlamAbility && AbilitySystemComponent && !AbilitySystemComponent->FindAbilitySpecFromClass(SlamAbility))
+	if (SpecialAbility && AbilitySystemComponent && !AbilitySystemComponent->FindAbilitySpecFromClass(SpecialAbility))
 	{
-		GrantAbility(SlamAbility);
+		GrantAbility(SpecialAbility);
 	}
 }
 
@@ -68,11 +70,11 @@ void AROHBossCharacter::Tick(float DeltaSeconds)
 
 	// 내려찍기: 주기 도래 + 사거리 내일 때 발동
 	const float Now = GetWorld()->GetTimeSeconds();
-	if (SlamAbility && AbilitySystemComponent && Now >= NextSlamTime && Distance < SlamTriggerRange)
+	if (SpecialAbility && AbilitySystemComponent && Now >= NextSpecialTime && Distance < SpecialTriggerRange)
 	{
-		if (AbilitySystemComponent->TryActivateAbilityByClass(SlamAbility))
+		if (AbilitySystemComponent->TryActivateAbilityByClass(SpecialAbility))
 		{
-			NextSlamTime = Now + SlamInterval;
+			NextSpecialTime = Now + SpecialInterval;
 		}
 	}
 }
@@ -98,4 +100,27 @@ void AROHBossCharacter::HandleDamageTaken(float Damage, AActor* InstigatorActor)
 				FString::Printf(TEXT("%s이(가) 광폭화했다!"), *BossName.ToString()));
 		}
 	}
+}
+
+AROHBossMorgath::AROHBossMorgath()
+{
+	BossName = FText::FromString(TEXT("모르가스"));
+	SpecialAbility = UROHAbility_BossBarrage::StaticClass();
+	SpecialInterval = 7.f;
+	SpecialTriggerRange = 1400.f; // 원거리형: 먼 거리에서도 패턴 사용
+
+	// 스탯: 액트1 최종 보스 — 발타르보다 강함 (docs/04 M4)
+	GetCapsuleComponent()->SetCapsuleSize(55.f, 120.f);
+	BaseMaxHealth = 2000.f;
+	BaseDexterity = 40.f;
+	BaseLevel = 12.f;
+	BaseMoveSpeed = 340.f;
+	AttackDamage = 20.f;
+	AttackRange = 900.f;
+	PreferredRange = 650.f; // 거리 유지 (사수형 AI 카이팅 재사용)
+	AttackInterval = 1.8f;
+	AttackAbility = UROHAbility_MonsterRanged::StaticClass();
+	XPValue = 1200;
+	EnrageHealthRatio = 0.35f;
+	EnrageMoveSpeedBonus = 150.f;
 }

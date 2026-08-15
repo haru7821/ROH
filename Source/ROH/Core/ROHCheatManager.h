@@ -81,9 +81,13 @@ public:
 
 	// --- M4 캠페인 ---
 
-	/** 보스 발타르를 전방에 소환 (패턴 전투 테스트용) */
+	/** 보스 소환: ROHSpawnBoss(발타르) / ROHSpawnBoss 2(모르가스) */
 	UFUNCTION(Exec)
-	void ROHSpawnBoss();
+	void ROHSpawnBoss(FString Which = TEXT("1"));
+
+	/** 난이도 변경: normal / nightmare / hell (몬스터 강화는 새 스폰부터) */
+	UFUNCTION(Exec)
+	void ROHSetDifficulty(FString Name);
 
 	/** 클래스 전환: warrior / elem. 예: ROHSetClass elem */
 	UFUNCTION(Exec)
