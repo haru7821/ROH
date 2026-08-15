@@ -331,6 +331,61 @@ void UROHCheatManager::ROHSkillUp(FName SkillId)
 	}
 }
 
+void UROHCheatManager::ROHMaxOut(int32 RankPerSkill)
+{
+	const APlayerController* PC = GetOuterAPlayerController();
+	AROHPlayerCharacter* Player = Cast<AROHPlayerCharacter>(PC ? PC->GetPawn() : nullptr);
+	if (!Player || !Player->GetProgression() || !Player->GetSkillTree())
+	{
+		return;
+	}
+	UROHProgressionComponent* Progression = Player->GetProgression();
+	UROHSkillTreeComponent* SkillTree = Player->GetSkillTree();
+
+	// 1) 레벨 50: 다음 레벨까지 남은 경험치를 정확히 반복 지급 (오버플로 방지)
+	int32 SafetyCounter = 0;
+	while (Progression->GetLevel() < UROHProgressionComponent::MaxLevel
+		&& ++SafetyCounter <= UROHProgressionComponent::MaxLevel)
+	{
+		Progression->GrantXP(UROHProgressionComponent::XPForNextLevel(Progression->GetLevel()) - Progression->GetXP());
+	}
+
+	// 2) 전 스킬 투자 — 필요한 포인트를 지급한 뒤 정식 경로(InvestPoint)로 투자
+	//    (패시브 GE 적용/선행 검증이 정상 경로를 타야 하므로 하드포인트 직접 조작 금지)
+	RankPerSkill = FMath::Clamp(RankPerSkill, 1, 20);
+	const TArray<FROHSkillDef>& Defs = UROHSkillTreeComponent::GetSkillDefs(SkillTree->GetPlayerClass());
+
+	int32 NeededPoints = 0;
+	for (const FROHSkillDef& Def : Defs)
+	{
+		NeededPoints += FMath::Max(0, FMath::Min(RankPerSkill, Def.MaxPoints) - SkillTree->GetRank(Def.SkillId));
+	}
+	for (int32 i = 0; i < NeededPoints; ++i)
+	{
+		Progression->RefundSkillPoint();
+	}
+
+	// 선행 스킬 관계는 다회 패스로 해소 (정의 순서와 무관하게 수렴)
+	int32 Invested = 0;
+	for (int32 Pass = 0; Pass < 3; ++Pass)
+	{
+		for (const FROHSkillDef& Def : Defs)
+		{
+			FString Error;
+			while (SkillTree->GetRank(Def.SkillId) < FMath::Min(RankPerSkill, Def.MaxPoints)
+				&& SkillTree->InvestPoint(Def.SkillId, Error))
+			{
+				++Invested;
+			}
+		}
+	}
+
+	CheatPrint(FString::Printf(TEXT("테스트 세팅 완료: Lv %d | 스킬 투자 %d회 (전 스킬 랭크 %d) | 남은 스킬P %d, 스탯P %d"),
+		Progression->GetLevel(), Invested, RankPerSkill,
+		Progression->GetSkillPoints(), Progression->GetStatPoints()));
+	CheatPrint(TEXT("스탯 분배: ROHAllocStat Strength 50 등 | 슬롯 배치: ROHBindSkill <1~4> <SkillId> | 목록: ROHSkillInfo"));
+}
+
 void UROHCheatManager::ROHSkillInfo()
 {
 	const APlayerController* PC = GetOuterAPlayerController();

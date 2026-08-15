@@ -67,6 +67,13 @@ public:
 	UFUNCTION(Exec)
 	void ROHSkillUp(FName SkillId);
 
+	/**
+	 * 테스트 세팅: 레벨 50 + 현재 클래스 전 스킬 투자.
+	 * 예: ROHMaxOut (전 스킬 1랭크) / ROHMaxOut 20 (전 스킬 만렙)
+	 */
+	UFUNCTION(Exec)
+	void ROHMaxOut(int32 RankPerSkill = 1);
+
 	/** 스킬트리 현황 출력 (계열/종류/랭크/요구 조건/시너지) */
 	UFUNCTION(Exec)
 	void ROHSkillInfo();
