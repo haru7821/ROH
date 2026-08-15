@@ -1,5 +1,6 @@
 #include "Abilities/ROHGameplayAbility.h"
 #include "Abilities/ROHGameplayEffects.h"
+#include "ROH.h" // LogROH
 #include "Character/ROHCharacterBase.h"
 #include "Combat/ROHCombatStatics.h"
 #include "Progression/ROHSkillTreeComponent.h"
