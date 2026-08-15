@@ -594,7 +594,7 @@ EROHItemQuality UROHItemDatabase::RollQuality(int32 ItemLevel, float MagicFind, 
 	return EROHItemQuality::Normal;
 }
 
-FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, EROHItemQuality Quality, int32 Seed) const
+FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, EROHItemQuality Quality, int32 Seed, bool bAsUnidentifiedDrop) const
 {
 	FROHItemInstance Instance;
 
@@ -615,6 +615,15 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 	{
 		FRandomStream Rng(Instance.Seed);
 
+		// 미감정 (docs/12): 드랍 경로의 마법+ 장비만 — 등급 강등 후에도 최종 등급 기준으로 판정
+		auto MarkUnidentified = [&Instance, bAsUnidentifiedDrop]()
+		{
+			if (bAsUnidentifiedDrop && Instance.Quality != EROHItemQuality::Normal)
+			{
+				Instance.bUnidentified = true;
+			}
+		};
+
 		// 유니크 (M5 2차): 베이스+ilvl 충족 후보에서 1개 선택 — 접사/소켓 없음 (고정 옵션이 대체)
 		if (Instance.Quality == EROHItemQuality::Unique)
 		{
@@ -629,6 +638,7 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 			if (Candidates.Num() > 0)
 			{
 				Instance.UniqueId = Candidates[Rng.RandRange(0, Candidates.Num() - 1)]->UniqueId;
+				MarkUnidentified();
 				return Instance;
 			}
 			// 후보 없음 → 레어 강등 (강등 판정은 스트림 미소비 — 기존 등급 경로의 소비 순서 불변)
@@ -656,6 +666,7 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 			if (PieceCandidates.Num() > 0)
 			{
 				Instance.SetPieceId = PieceCandidates[Rng.RandRange(0, PieceCandidates.Num() - 1)]->PieceId;
+				MarkUnidentified();
 				return Instance;
 			}
 			Instance.Quality = EROHItemQuality::Rare;
@@ -667,6 +678,7 @@ FROHItemInstance UROHItemDatabase::GenerateItem(FName BaseId, int32 ItemLevel, E
 			RollAffixes(Instance, *Base, Rng);
 		}
 		RollSockets(Instance, *Base, Rng);
+		MarkUnidentified();
 	}
 	return Instance;
 }
@@ -848,7 +860,8 @@ FROHDropResult UROHItemDatabase::RollTreasureClass(FName TCId, int32 ItemLevel, 
 			if (Chosen->Type == EROHTreasureEntryType::BaseItem)
 			{
 				const EROHItemQuality Quality = RollQuality(ItemLevel, MagicFind, Rng);
-				FROHItemInstance Item = GenerateItem(Chosen->Ref, ItemLevel, Quality, Rng.RandRange(1, MAX_int32 - 1));
+				// 드랍 경로: 마법+ 장비는 미감정 상태로 (docs/12 — 룬/물약 등은 등급 Normal이라 무영향)
+				FROHItemInstance Item = GenerateItem(Chosen->Ref, ItemLevel, Quality, Rng.RandRange(1, MAX_int32 - 1), /*bAsUnidentifiedDrop=*/true);
 				if (Item.IsValid())
 				{
 					Result.Items.Add(Item);
@@ -877,6 +890,12 @@ FText UROHItemDatabase::GetItemDisplayName(const FROHItemInstance& Instance) con
 	if (!Base)
 	{
 		return FText::FromString(TEXT("???"));
+	}
+
+	// 미감정 (docs/12): 정체 숨김 — 베이스명만, 등급색은 유지 (색으로 기대감)
+	if (Instance.bUnidentified)
+	{
+		return FText::Format(NSLOCTEXT("ROH", "UnidentifiedItemName", "미감정 {0}"), Base->DisplayName);
 	}
 
 	// 유니크/고대 (M5 2차): 성인 무구 고유명, 고대는 "[고대]" 접두

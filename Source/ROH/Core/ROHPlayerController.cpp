@@ -5,6 +5,7 @@
 #include "UI/ROHWaypointWindow.h"
 #include "UI/ROHInventoryWindow.h"
 #include "UI/ROHSkillTreeWindow.h"
+#include "UI/ROHVendorWindow.h"
 #include "Blueprint/UserWidget.h" // CreateWidget
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -158,6 +159,25 @@ void AROHPlayerController::ToggleUiWindow(EROHUiWindowKind Kind)
 	{
 		CurrentWindow->AddToViewport(10); // 디버그 메시지 위
 		CurrentWindowKind = Kind;
+	}
+}
+
+void AROHPlayerController::OpenVendorWindow(AROHTownNpc* Npc)
+{
+	if (!Npc)
+	{
+		return;
+	}
+	// 벤더는 토글 없이 항상 새로 연다 (다른 NPC로 갈아탈 때 재고/역할 갱신)
+	CloseUiWindow();
+
+	UROHVendorWindow* Window = CreateWidget<UROHVendorWindow>(this, UROHVendorWindow::StaticClass());
+	if (Window)
+	{
+		Window->SetNpc(Npc); // AddToViewport(NativeConstruct → RefreshContents) 전에 주입
+		Window->AddToViewport(10);
+		CurrentWindow = Window;
+		CurrentWindowKind = EROHUiWindowKind::Vendor;
 	}
 }
 

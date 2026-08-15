@@ -55,8 +55,12 @@ public:
 	/** 등급 판정: 매직파인드(MF)는 체감 곡선 적용 (docs/02 §3.4) */
 	EROHItemQuality RollQuality(int32 ItemLevel, float MagicFind, FRandomStream& Rng) const;
 
-	/** 아이템 인스턴스 생성: 등급에 따라 접사 굴림. Seed 0이면 무작위 시드 */
-	FROHItemInstance GenerateItem(FName BaseId, int32 ItemLevel, EROHItemQuality Quality, int32 Seed = 0) const;
+	/**
+	 * 아이템 인스턴스 생성: 등급에 따라 접사 굴림. Seed 0이면 무작위 시드.
+	 * bAsUnidentifiedDrop: 몬스터 드랍 경로 전용 — 마법+ 장비를 미감정 상태로 (docs/12).
+	 * 상점/치트/도박 생성은 기본값(false) = 감정 완료.
+	 */
+	FROHItemInstance GenerateItem(FName BaseId, int32 ItemLevel, EROHItemQuality Quality, int32 Seed = 0, bool bAsUnidentifiedDrop = false) const;
 
 	/** 계층형 TC 굴림: NoDrop/골드/베이스/하위TC → 등급 판정 → 접사 굴림 */
 	FROHDropResult RollTreasureClass(FName TCId, int32 ItemLevel, float MagicFind) const;

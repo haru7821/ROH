@@ -4,6 +4,7 @@
 #include "Items/ROHItemDatabase.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/HorizontalBox.h"
+#include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
 #include "Engine/GameInstance.h" // GetSubsystem<T>() 템플릿 인스턴스화에 완전한 타입 필요
 
@@ -58,6 +59,7 @@ void UROHInventoryWindow::RefreshContents()
 		return;
 	}
 	ContentBox->ClearChildren();
+	StatusText = nullptr;
 
 	AROHPlayerCharacter* Player = GetPlayerCharacter();
 	UROHInventoryComponent* Inventory = Player ? Player->GetInventory() : nullptr;
@@ -68,6 +70,8 @@ void UROHInventoryWindow::RefreshContents()
 		MakeText(ContentBox, TEXT("인벤토리를 찾을 수 없습니다"), FLinearColor(0.6f, 0.6f, 0.6f));
 		return;
 	}
+
+	StatusText = MakeText(ContentBox, FString(), FLinearColor(1.f, 0.6f, 0.3f));
 
 	UHorizontalBox* Columns = WidgetTree->ConstructWidget<UHorizontalBox>();
 	ContentBox->AddChild(Columns);
@@ -168,15 +172,25 @@ void UROHInventoryWindow::OnAction(FName InActionId, int32 InActionIndex)
 		const TArray<FROHItemInstance>& Items = Inventory->GetItems();
 		const FROHItemBaseDef* Base = Items.IsValidIndex(InActionIndex)
 			? Database->FindBase(Items[InActionIndex].BaseId) : nullptr;
+		FString FailReason;
 		if (Base && Base->Kind == EROHItemKind::Equipment)
 		{
-			Inventory->EquipItemByIndex(InActionIndex);
+			// 장착 실패 사유 중 사용자가 고칠 수 있는 것(미감정)은 상태줄로 안내 (docs/12)
+			const bool bWasUnidentified = Items[InActionIndex].bUnidentified;
+			if (!Inventory->EquipItemByIndex(InActionIndex) && bWasUnidentified)
+			{
+				FailReason = TEXT("미감정 아이템 — 셀바에게 감정하세요 (개당 50골드)");
+			}
 		}
 		else if (Base && Base->Kind == EROHItemKind::Potion)
 		{
 			Inventory->UsePotionAt(InActionIndex);
 		}
 		RefreshContents();
+		if (!FailReason.IsEmpty() && StatusText)
+		{
+			StatusText->SetText(FText::FromString(FailReason));
+		}
 		return;
 	}
 	Super::OnAction(InActionId, InActionIndex);

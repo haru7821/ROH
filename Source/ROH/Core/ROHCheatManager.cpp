@@ -264,6 +264,7 @@ void UROHCheatManager::ROHAddGold(int32 Amount)
 
 void UROHCheatManager::ROHBuyPotion()
 {
+	// 정식 창구는 마을 포션상인 미로(벤더 창, docs/12) — 이 치트는 테스트 편의로 유지
 	UROHItemDatabase* Database = GetDatabase(this);
 	UROHInventoryComponent* Inventory = GetPlayerInventory(this);
 	if (!Database || !Inventory)
@@ -975,4 +976,15 @@ void UROHCheatManager::ROHGiveGem(int32 Count)
 	}
 	CheatPrint(FString::Printf(TEXT("획득: 운명의 보석 ×%d (도박: ROHGamble — %d개 소모)"),
 		Given, UROHInventoryComponent::GambleGemCost));
+}
+
+void UROHCheatManager::ROHIdentify()
+{
+	if (UROHInventoryComponent* Inventory = GetPlayerInventory(this))
+	{
+		const int32 Identified = Inventory->IdentifyAll();
+		CheatPrint(Identified > 0
+			? FString::Printf(TEXT("감정 완료: %d개 (정식 창구: 마을 셀바 — 개당 50골드)"), Identified)
+			: TEXT("미감정 아이템이 없습니다"));
+	}
 }

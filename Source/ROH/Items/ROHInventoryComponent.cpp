@@ -70,6 +70,12 @@ bool UROHInventoryComponent::EquipItemByIndex(int32 ItemIndex)
 		return false;
 	}
 
+	// 미감정 장착 불가 (docs/12) — 셀바 또는 ROHIdentify로 감정
+	if (Items[ItemIndex].bUnidentified)
+	{
+		return false;
+	}
+
 	const FROHItemInstance ItemToEquip = Items[ItemIndex];
 	Items.RemoveAt(ItemIndex);
 
@@ -101,7 +107,7 @@ bool UROHInventoryComponent::EquipFirstEquippable()
 	{
 		const FROHItemBaseDef* Base = Database->FindBase(Items[i].BaseId);
 		if (Base && Base->Kind == EROHItemKind::Equipment && Base->Slot != EROHEquipSlot::None
-			&& !Equipped.Contains(Base->Slot))
+			&& !Equipped.Contains(Base->Slot) && !Items[i].bUnidentified) // 미감정 스킵 (docs/12)
 		{
 			return EquipItemByIndex(i);
 		}
@@ -392,6 +398,11 @@ bool UROHInventoryComponent::SocketRune(int32 ItemIndex, int32 RuneItemIndex, FS
 		OutError = TEXT("첫 번째 인덱스는 장비여야 합니다. (장착 중이면 해제 후 소켓하세요)");
 		return false;
 	}
+	if (Target.bUnidentified)
+	{
+		OutError = TEXT("미감정 아이템입니다 — 먼저 감정하세요 (셀바/ROHIdentify)");
+		return false;
+	}
 	if (Target.SocketedRunes.Num() >= Target.MaxSockets)
 	{
 		OutError = Target.MaxSockets == 0 ? TEXT("소켓이 없는 장비입니다.") : TEXT("빈 소켓이 없습니다.");
@@ -436,6 +447,11 @@ bool UROHInventoryComponent::SalvageUnique(int32 ItemIndex, FString& OutMessage)
 		OutMessage = TEXT("유니크만 분해할 수 있습니다.");
 		return false;
 	}
+	if (Items[ItemIndex].bUnidentified)
+	{
+		OutMessage = TEXT("미감정 아이템입니다 — 먼저 감정하세요 (셀바/ROHIdentify)");
+		return false;
+	}
 
 	// 조각 굴림을 먼저 확정하고 공간을 검사 — 파괴 후 조각이 소실되는 일 방지
 	// (분해는 시드 재현이 불필요한 소비성 굴림)
@@ -478,6 +494,11 @@ bool UROHInventoryComponent::ForgeAncient(int32 ItemIndex, FString& OutMessage)
 	if (Target.Quality != EROHItemQuality::Unique)
 	{
 		OutMessage = TEXT("유니크만 고대로 벼릴 수 있습니다. (장착 중이면 해제 후 시도)");
+		return false;
+	}
+	if (Target.bUnidentified)
+	{
+		OutMessage = TEXT("미감정 아이템입니다 — 먼저 감정하세요 (셀바/ROHIdentify)");
 		return false;
 	}
 
@@ -602,6 +623,43 @@ bool UROHInventoryComponent::GambleWithGems(FString& OutMessage, bool& bOutAncie
 	}
 	UE_LOG(LogROH, Log, TEXT("%s"), *OutMessage);
 	return true;
+}
+
+bool UROHInventoryComponent::IdentifyItemAt(int32 ItemIndex)
+{
+	if (!Items.IsValidIndex(ItemIndex) || !Items[ItemIndex].bUnidentified)
+	{
+		return false;
+	}
+	Items[ItemIndex].bUnidentified = false;
+	return true;
+}
+
+int32 UROHInventoryComponent::IdentifyAll()
+{
+	int32 Identified = 0;
+	for (FROHItemInstance& Item : Items)
+	{
+		if (Item.bUnidentified)
+		{
+			Item.bUnidentified = false;
+			++Identified;
+		}
+	}
+	return Identified;
+}
+
+int32 UROHInventoryComponent::CountUnidentified() const
+{
+	int32 Count = 0;
+	for (const FROHItemInstance& Item : Items)
+	{
+		if (Item.bUnidentified)
+		{
+			++Count;
+		}
+	}
+	return Count;
 }
 
 void UROHInventoryComponent::ExportState(TArray<FROHItemInstance>& OutItems, TMap<EROHEquipSlot, FROHItemInstance>& OutEquipped, int32& OutGold) const

@@ -178,6 +178,14 @@ struct FROHItemInstance
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
 	FName SetPieceId;
 
+	/**
+	 * 미감정 (M5 4차, docs/12): 드랍된 마법+ 장비는 true — 장착/소켓/분해/합성 불가,
+	 * 이름은 "미감정 <베이스명>" (등급색 유지). 셀바(50골드) 또는 ROHIdentify로 감정.
+	 * 추가 필드라 구세이브 아이템은 감정 상태(false)로 로드된다.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+	bool bUnidentified = false;
+
 	bool IsValid() const { return !BaseId.IsNone(); }
 };
 

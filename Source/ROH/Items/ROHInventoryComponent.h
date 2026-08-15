@@ -67,6 +67,12 @@ public:
 	/** 도박 1회 비용 (운명의 보석) */
 	static constexpr int32 GambleGemCost = 3;
 
+	// --- 감정 (M5 4차, docs/12 — 골드 차감은 호출측: 벤더 창 SpendGold / 치트는 무료) ---
+	bool IdentifyItemAt(int32 ItemIndex);
+	/** 전부 감정 — 감정된 개수 반환 */
+	int32 IdentifyAll();
+	int32 CountUnidentified() const;
+
 	void AddGold(int32 Amount);
 	bool SpendGold(int32 Amount);
 	int32 GetGold() const { return Gold; }

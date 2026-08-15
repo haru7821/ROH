@@ -155,4 +155,8 @@ public:
 	/** 운명의 보석 지급 (테스트용). 예: ROHGiveGem 9 */
 	UFUNCTION(Exec)
 	void ROHGiveGem(int32 Count = 3);
+
+	/** 전부 무료 감정 (테스트용 — 정식 창구는 셀바, 개당 50골드) */
+	UFUNCTION(Exec)
+	void ROHIdentify();
 };

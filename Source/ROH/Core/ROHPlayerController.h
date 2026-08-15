@@ -7,15 +7,17 @@
 class UInputMappingContext;
 class UInputAction;
 class UROHUiWindow;
+class AROHTownNpc;
 
-/** UI 창 종류 (동시에 1개만 — ToggleUiWindow) */
+/** UI 창 종류 (동시에 1개만 — ToggleUiWindow / 벤더는 OpenVendorWindow 전용) */
 UENUM()
 enum class EROHUiWindowKind : uint8
 {
 	None,
 	Waypoint,
 	Inventory,
-	SkillTree
+	SkillTree,
+	Vendor
 };
 
 /**
@@ -38,6 +40,9 @@ public:
 	 */
 	void ToggleUiWindow(EROHUiWindowKind Kind);
 	void CloseUiWindow();
+
+	/** 벤더 창 열기 (docs/12) — NPC 참조가 필요해 ToggleUiWindow와 별도 진입점 */
+	void OpenVendorWindow(AROHTownNpc* Npc);
 
 protected:
 	virtual void BeginPlay() override;

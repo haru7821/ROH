@@ -57,5 +57,8 @@ private:
 	void BuildZoneTable();
 	FVector GetZoneCenter(int32 ZoneIndex) const;
 
+	/** 마을 NPC 6인 배치 (docs/12 로스터 — 마을 중심 반경 600, 60도 간격 호) */
+	void SpawnTownNpcs(const FVector& TownCenter);
+
 	TArray<FROHZoneDef> Zones;
 };

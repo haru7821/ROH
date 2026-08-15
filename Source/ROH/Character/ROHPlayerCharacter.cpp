@@ -9,10 +9,11 @@
 #include "Progression/ROHProgressionComponent.h"
 #include "Progression/ROHSkillTreeComponent.h"
 #include "Core/ROHGameMode.h"
-#include "Core/ROHPlayerController.h" // ToggleUiWindow(EROHUiWindowKind) — 웨이포인트 창
+#include "Core/ROHPlayerController.h" // ToggleUiWindow/OpenVendorWindow — UI 창
 #include "Campaign/ROHCampaignSubsystem.h"
 #include "World/ROHWaypoint.h"
 #include "World/ROHZoneManager.h"
+#include "World/ROHTownNpc.h"
 #include "GameplayEffect.h"
 #include "ROHGameplayTags.h"
 #include "GameFramework/SpringArmComponent.h"
@@ -293,7 +294,34 @@ void AROHPlayerCharacter::Interact()
 		return;
 	}
 
-	// 2) 근처 웨이포인트 = 지역 선택 창 (UI 1차 — 사용자 결정: E 순환 이동 대체)
+	// 2) 근처 마을 NPC = 벤더 창 (docs/12) — 웨이포인트보다 우선 (마을 중심 근처 겹침 시 NPC 우선)
+	AROHTownNpc* NearNpc = nullptr;
+	float BestNpcDistSq = FMath::Square(300.f);
+	for (TActorIterator<AROHTownNpc> It(GetWorld()); It; ++It)
+	{
+		const float NpcDistSq = FVector::DistSquared(GetActorLocation(), It->GetActorLocation());
+		if (NpcDistSq < BestNpcDistSq)
+		{
+			BestNpcDistSq = NpcDistSq;
+			NearNpc = *It;
+		}
+	}
+	if (NearNpc)
+	{
+		if (GEngine)
+		{
+			// 인사말 (docs/12 문구가 사양)
+			GEngine->AddOnScreenDebugMessage(2, 4.f, NearNpc->GetRoleColor(),
+				FString::Printf(TEXT("%s: \"%s\""), *NearNpc->GetDisplayName().ToString(), *NearNpc->GetGreeting().ToString()));
+		}
+		if (AROHPlayerController* PC = Cast<AROHPlayerController>(GetController()))
+		{
+			PC->OpenVendorWindow(NearNpc);
+		}
+		return;
+	}
+
+	// 3) 근처 웨이포인트 = 지역 선택 창 (UI 1차 — 사용자 결정: E 순환 이동 대체)
 	const AROHWaypoint* NearWaypoint = nullptr;
 	float BestWaypointDistSq = FMath::Square(300.f);
 	for (TActorIterator<AROHWaypoint> It(GetWorld()); It; ++It)
@@ -314,7 +342,7 @@ void AROHPlayerCharacter::Interact()
 		}
 	}
 
-	// 3) 인벤토리의 첫 장비 장착
+	// 4) 인벤토리의 첫 장비 장착
 	if (Inventory && Inventory->EquipFirstEquippable())
 	{
 		ShowMessage(TEXT("장비 장착 완료 (콘솔 ROHDumpAttrs로 스탯 확인)"));
