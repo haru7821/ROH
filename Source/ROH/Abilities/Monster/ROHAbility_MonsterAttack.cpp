@@ -24,9 +24,8 @@ void UROHAbility_MonsterMelee::ActivateAbility(const FGameplayAbilitySpecHandle 
 	AROHMonsterCharacter* Monster = Cast<AROHMonsterCharacter>(GetROHCharacter());
 	if (Monster)
 	{
-		FROHDamageParams Damage;
-		Damage.PhysicalDamage = Monster->GetAttackDamage();
-		Damage.bUseAttackRoll = true;
+		// 피해 유형/명중 굴림 여부는 몬스터의 AttackDamageType이 결정 (docs/10 §5.3)
+		const FROHDamageParams Damage = Monster->MakeAttackDamageParams();
 
 		for (AROHCharacterBase* Target : UROHCombatStatics::GetHostileTargetsInCone(Monster, Monster->GetAttackRange() * 1.2f, 60.f))
 		{
@@ -70,9 +69,8 @@ void UROHAbility_MonsterRanged::ActivateAbility(const FGameplayAbilitySpecHandle
 			const FVector SpawnLocation = Monster->GetActorLocation() + Monster->GetActorForwardVector() * 80.f;
 			const FRotator SpawnRotation = (AimTarget - SpawnLocation).GetSafeNormal().Rotation();
 
-			FROHDamageParams Damage;
-			Damage.PhysicalDamage = Monster->GetAttackDamage();
-			Damage.bUseAttackRoll = true;
+			// 피해 유형/명중 굴림 여부는 몬스터의 AttackDamageType이 결정 (docs/10 §5.3)
+			const FROHDamageParams Damage = Monster->MakeAttackDamageParams();
 
 			FActorSpawnParameters SpawnParams;
 			SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;

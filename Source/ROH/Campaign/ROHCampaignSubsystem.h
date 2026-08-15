@@ -24,7 +24,7 @@ struct FROHDifficultyParams
 	float AttackRatingMult = 1.f;
 	float DefenseMult = 1.f;
 	float MonsterLevelBonus = 0.f;   // 명중 공식 + 드랍 ilvl에 반영
-	float PlayerResistPenalty = 0.f; // 음수로 적용 (악몽 -40 / 지옥 -100)
+	float PlayerResistPenalty = 0.f; // 음수로 적용 (악몽 -25 / 지옥 -50 — docs/10 §4.2)
 };
 
 /**

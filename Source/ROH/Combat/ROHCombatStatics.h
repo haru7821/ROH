@@ -6,6 +6,18 @@
 
 class AROHCharacterBase;
 
+/** 피해 유형 6종 (docs/10 §5.3) */
+UENUM(BlueprintType)
+enum class EROHDamageType : uint8
+{
+	Physical,
+	Fire,
+	Cold,
+	Lightning,
+	Poison,
+	Shadow
+};
+
 /** 유형별 피해량 묶음. 무기/스킬은 여러 유형의 피해를 동시에 가질 수 있다 (디아블로2 방식). */
 USTRUCT(BlueprintType)
 struct FROHDamageParams
@@ -24,6 +36,12 @@ struct FROHDamageParams
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float LightningDamage = 0.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+	float PoisonDamage = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+	float ShadowDamage = 0.f;
+
 	/** true면 명중 굴림(AR vs Defense) 적용. 근접/원거리 '공격'은 true, 주문은 false (디아블로2 방식) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	bool bUseAttackRoll = true;
@@ -41,9 +59,9 @@ class ROH_API UROHCombatStatics : public UBlueprintFunctionLibrary
 
 public:
 	/**
-	 * Source가 Target에게 피해를 가한다. 명중 실패 시 false.
-	 * 명중 공식(디아블로2): 2*AR/(AR+DEF) * alvl/(alvl+dlvl), 5%~95% 클램프
-	 * 저항: 유형별 % 감산, 75% 캡
+	 * Source가 Target에게 피해를 가한다 (docs/10 §5 파이프라인). 명중 실패 시에만 false.
+	 * 명중(§3.3): 2*AR/(AR+DEF) * alvl/(alvl+dlvl), 5%~95% 클램프
+	 * 치명타(§3.2) → 원소 저항/PDR(§4.2~4.3) → 산포 → 치명 배율 → 룬 배율(§5.2)
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ROH|Combat")
 	static bool ApplyDamage(AROHCharacterBase* Source, AROHCharacterBase* Target, const FROHDamageParams& Params);

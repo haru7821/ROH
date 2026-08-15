@@ -20,7 +20,7 @@ FROHDifficultyParams UROHCampaignSubsystem::GetDifficultyParams(EROHDifficulty I
 		Params.AttackRatingMult = 2.f;
 		Params.DefenseMult = 1.6f;
 		Params.MonsterLevelBonus = 15.f;
-		Params.PlayerResistPenalty = -40.f;
+		Params.PlayerResistPenalty = -25.f; // docs/10 §4.2
 		break;
 	case EROHDifficulty::Hell:
 		Params.HealthMult = 6.f;
@@ -29,7 +29,7 @@ FROHDifficultyParams UROHCampaignSubsystem::GetDifficultyParams(EROHDifficulty I
 		Params.AttackRatingMult = 3.5f;
 		Params.DefenseMult = 2.5f;
 		Params.MonsterLevelBonus = 30.f;
-		Params.PlayerResistPenalty = -100.f;
+		Params.PlayerResistPenalty = -50.f; // docs/10 §4.2
 		break;
 	default:
 		break;

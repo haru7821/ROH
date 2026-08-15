@@ -96,11 +96,27 @@ public:
 	FGameplayAttributeData MagicFind;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, MagicFind)
 
-	// 저항: 퍼센트(0~75 캡, 악몽/지옥 페널티로 음수 가능)
+	/** 치명타 확률 고정 보너스 %. 기본 5% + DEX/50 항은 파이프라인 공식이 담당 (docs/10 §3.2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData CritChance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, CritChance)
+
+	/** 치명타 피해 총 % (150 = 1.5배 — docs/10 §3.2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData CritDamage;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, CritDamage)
+
+	/** 룬 위력 %: 최종 피해 곱연산 RuneMultiplier = 1 + RunePower/100 (docs/10 §5.2) */
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	FGameplayAttributeData RunePower;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, RunePower)
+
+	/** 물리 피해 감소 FlatPDR% 역할 (docs/10 §4.3). 원소 저항과 별개 축, 캡은 파이프라인에서 90% */
 	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
 	FGameplayAttributeData PhysicalResistance;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, PhysicalResistance)
 
+	// 원소 저항 5종: 퍼센트 감쇄 (docs/10 §4.2 — 캡 75, 악몽/지옥 페널티로 음수 가능)
 	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
 	FGameplayAttributeData FireResistance;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, FireResistance)
@@ -112,6 +128,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
 	FGameplayAttributeData LightningResistance;
 	ATTRIBUTE_ACCESSORS(UROHAttributeSet, LightningResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData PoisonResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, PoisonResistance)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Resistance")
+	FGameplayAttributeData ShadowResistance;
+	ATTRIBUTE_ACCESSORS(UROHAttributeSet, ShadowResistance)
 
 	// --- 이동 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Movement")

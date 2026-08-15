@@ -19,10 +19,15 @@ UROHAttributeSet::UROHAttributeSet()
 	InitDefense(50.f);
 	InitAttackPower(0.f);
 	InitMagicFind(0.f);
+	InitCritChance(0.f);
+	InitCritDamage(150.f); // 치명타 기본 1.5배 (docs/10 §3.2)
+	InitRunePower(0.f);
 	InitPhysicalResistance(0.f);
 	InitFireResistance(0.f);
 	InitColdResistance(0.f);
 	InitLightningResistance(0.f);
+	InitPoisonResistance(0.f);
+	InitShadowResistance(0.f);
 	InitMoveSpeed(600.f);
 	InitIncomingDamage(0.f);
 }

@@ -120,6 +120,7 @@ AROHBossMorgath::AROHBossMorgath()
 	PreferredRange = 650.f; // 거리 유지 (사수형 AI 카이팅 재사용)
 	AttackInterval = 1.8f;
 	AttackAbility = UROHAbility_MonsterRanged::StaticClass();
+	AttackDamageType = EROHDamageType::Fire; // 기본 원거리도 화염탄 (3연발 패턴과 속성 통일)
 	XPValue = 1200;
 	EnrageHealthRatio = 0.35f;
 	EnrageMoveSpeedBonus = 150.f;

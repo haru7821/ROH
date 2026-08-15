@@ -8,10 +8,13 @@ AROHMonsterSpawner::AROHMonsterSpawner()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
-	// 기본 구성: 3종 순환 스폰
+	// 기본 구성: 6종 순환 스폰 (docs/04 M4 몬스터 확충)
 	MonsterClasses.Add(AROHMonster_Grunt::StaticClass());
 	MonsterClasses.Add(AROHMonster_Archer::StaticClass());
 	MonsterClasses.Add(AROHMonster_Charger::StaticClass());
+	MonsterClasses.Add(AROHMonster_Brute::StaticClass());
+	MonsterClasses.Add(AROHMonster_Hexer::StaticClass());
+	MonsterClasses.Add(AROHMonster_Stalker::StaticClass());
 }
 
 void AROHMonsterSpawner::BeginPlay()
@@ -65,6 +68,18 @@ void AROHMonsterSpawner::SpawnOne()
 	{
 		++AliveCount;
 		Monster->OnDeath.AddDynamic(this, &AROHMonsterSpawner::OnMonsterDeath);
+
+		// 정예 판정: 고유 3%, 정예 10% (docs/04 M4 챔피언/유니크 변형)
+		// SpawnActor 직후 = 빙의 난이도 스케일링 이후이므로 배율이 난이도와 합성된다
+		const float EliteRoll = FMath::FRand();
+		if (EliteRoll < 0.03f)
+		{
+			Monster->PromoteToRank(EROHMonsterRank::Unique);
+		}
+		else if (EliteRoll < 0.13f)
+		{
+			Monster->PromoteToRank(EROHMonsterRank::Champion);
+		}
 	}
 }
 

@@ -87,7 +87,9 @@ const TArray<FROHSkillDef>& UROHSkillTreeComponent::GetSkillDefs(EROHPlayerClass
 			{ Bonus(UROHAttributeSet::GetFireResistanceAttribute(), 2.f),
 			  Bonus(UROHAttributeSet::GetColdResistanceAttribute(), 2.f),
 			  Bonus(UROHAttributeSet::GetLightningResistanceAttribute(), 2.f),
-			  Bonus(UROHAttributeSet::GetPhysicalResistanceAttribute(), 1.f) }),
+			  Bonus(UROHAttributeSet::GetPoisonResistanceAttribute(), 2.f),
+			  Bonus(UROHAttributeSet::GetShadowResistanceAttribute(), 2.f),
+			  Bonus(UROHAttributeSet::GetPhysicalResistanceAttribute(), 1.f) }), // PhysicalResistance = PDR (docs/10 §4.3)
 
 		// --- 투지 (Fortitude) ---
 		MakePassive(TEXT("WeaponMastery"), TEXT("무기 숙련"), TEXT("투지"), EROHPlayerClass::Warrior, 1, NAME_None,

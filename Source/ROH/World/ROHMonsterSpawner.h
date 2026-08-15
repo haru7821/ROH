@@ -34,7 +34,7 @@ protected:
 	TArray<TSubclassOf<AROHMonsterCharacter>> MonsterClasses;
 
 	UPROPERTY(EditAnywhere, Category = "ROH|Spawner")
-	int32 MaxAlive = 6;
+	int32 MaxAlive = 8;
 
 	UPROPERTY(EditAnywhere, Category = "ROH|Spawner")
 	float SpawnRadius = 800.f;

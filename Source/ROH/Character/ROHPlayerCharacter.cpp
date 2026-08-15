@@ -189,11 +189,13 @@ void AROHPlayerCharacter::ApplyDifficultyResistPenalty()
 	// 장비/패시브와 동일 패턴의 런타임 무한 GE (docs/04 M4: 난이도 저항 페널티)
 	UGameplayEffect* PenaltyEffect = NewObject<UGameplayEffect>(GetTransientPackage());
 	PenaltyEffect->DurationPolicy = EGameplayEffectDurationType::Infinite;
-	const FGameplayAttribute ResistAttributes[4] = {
+	// 원소 저항 5종만 감산 — PhysicalResistance는 PDR이라 페널티 대상 아님 (docs/10 §4.2~4.3)
+	const FGameplayAttribute ResistAttributes[5] = {
 		UROHAttributeSet::GetFireResistanceAttribute(),
 		UROHAttributeSet::GetColdResistanceAttribute(),
 		UROHAttributeSet::GetLightningResistanceAttribute(),
-		UROHAttributeSet::GetPhysicalResistanceAttribute(),
+		UROHAttributeSet::GetPoisonResistanceAttribute(),
+		UROHAttributeSet::GetShadowResistanceAttribute(),
 	};
 	for (const FGameplayAttribute& Attribute : ResistAttributes)
 	{

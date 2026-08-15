@@ -79,6 +79,8 @@ void UROHItemDatabase::BuildDefaultData()
 	AddAffix("Fortified",TEXT("강화된"),   true, UROHAttributeSet::GetDefenseAttribute(), 15.f, 35.f, 6, { EROHEquipSlot::Shield, EROHEquipSlot::Helm, EROHEquipSlot::Chest, EROHEquipSlot::Boots });
 	AddAffix("Precise",  TEXT("정밀한"),   true, UROHAttributeSet::GetAttackRatingAttribute(), 15.f, 50.f, 1, { EROHEquipSlot::Weapon, EROHEquipSlot::Helm });
 	AddAffix("Lucky",    TEXT("행운의"),   true, UROHAttributeSet::GetMagicFindAttribute(), 5.f, 15.f, 3, {});
+	AddAffix("Keen",     TEXT("예리한"),   true, UROHAttributeSet::GetCritChanceAttribute(), 2.f, 6.f, 3, { EROHEquipSlot::Weapon });
+	AddAffix("Deadly",   TEXT("치명적인"), true, UROHAttributeSet::GetCritDamageAttribute(), 10.f, 30.f, 5, { EROHEquipSlot::Weapon });
 
 	// 접미사 (스탯/저항/자원)
 	AddAffix("OfStrength",  TEXT("힘의"),     false, UROHAttributeSet::GetStrengthAttribute(), 2.f, 8.f, 1, {});
@@ -89,6 +91,9 @@ void UROHItemDatabase::BuildDefaultData()
 	AddAffix("OfFire",      TEXT("화염막이"), false, UROHAttributeSet::GetFireResistanceAttribute(), 5.f, 20.f, 2, {});
 	AddAffix("OfFrost",     TEXT("냉기막이"), false, UROHAttributeSet::GetColdResistanceAttribute(), 5.f, 20.f, 2, {});
 	AddAffix("OfStorm",     TEXT("번개막이"), false, UROHAttributeSet::GetLightningResistanceAttribute(), 5.f, 20.f, 2, {});
+	AddAffix("OfVenomWard", TEXT("독막이"),   false, UROHAttributeSet::GetPoisonResistanceAttribute(), 5.f, 20.f, 2, {});
+	AddAffix("OfShadowWard",TEXT("그림자막이"), false, UROHAttributeSet::GetShadowResistanceAttribute(), 5.f, 20.f, 3, {});
+	AddAffix("OfRunes",     TEXT("룬각인의"), false, UROHAttributeSet::GetRunePowerAttribute(), 5.f, 15.f, 5, {}); // 룬 배율 합산원 (docs/10 §5.2)
 	AddAffix("OfHaste",     TEXT("신속의"),   false, UROHAttributeSet::GetMoveSpeedAttribute(), 20.f, 60.f, 4, { EROHEquipSlot::Boots });
 
 	// ---------- 트레저 클래스 ----------
