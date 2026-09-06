@@ -1,0 +1,100 @@
+# ============================================================
+# Jarvis 설정 — 이 파일을 config.toml 로 복사해서 쓰세요.
+#   copy config.example.toml config.toml
+# config.toml 은 .gitignore 로 커밋에서 제외됩니다.
+# ============================================================
+
+[api]
+# 비워두면 환경변수 ANTHROPIC_API_KEY 를 사용합니다 (권장).
+api_key = ""
+model = "claude-opus-5"
+# 사고 깊이: low / medium / high / xhigh / max
+# 음성 비서는 응답 속도가 중요하므로 medium 을 기본으로 둡니다.
+effort = "medium"
+max_tokens = 8000
+# 한 번의 요청에서 도구를 최대 몇 번까지 연속 호출할지
+max_tool_iterations = 12
+
+[assistant]
+name = "자비스"
+# 사용자를 부르는 호칭
+address = "보스"
+# 대화 기록을 몇 턴까지 유지할지 (넘으면 오래된 것부터 버림)
+history_turns = 12
+
+[hotkey]
+# 눌러서 말하기 단축키. pynput 표기법: <ctrl>, <alt>, <shift>, <cmd>
+combo = "<ctrl>+<space>"
+# hold  : 누르고 있는 동안 녹음, 떼면 전송 (오인식 없음, 권장)
+# toggle: 한 번 누르면 녹음 시작, 다시 누르면 전송
+mode = "hold"
+# 종료 단축키
+quit_combo = "<ctrl>+<alt>+q"
+
+[audio]
+# 입력 장치 이름의 일부 (빈 값이면 윈도우 기본 마이크)
+input_device = ""
+# 이 길이보다 짧은 녹음은 잘못 누른 것으로 보고 무시 (초)
+min_seconds = 0.4
+max_seconds = 60.0
+
+[stt]
+# faster-whisper 모델: tiny / base / small / medium / large-v3
+# 한국어는 small 이상 권장. GPU 없으면 small 이 속도/정확도 균형점.
+model_size = "small"
+# cpu 또는 cuda
+device = "cpu"
+# cpu: int8 / cuda: float16
+compute_type = "int8"
+language = "ko"
+
+[tts]
+# edge = 마이크로소프트 뉴럴 보이스(인터넷 필요, 품질 좋음)
+# sapi = 윈도우 내장 음성(오프라인)
+# off  = 음성 출력 없음 (텍스트만)
+engine = "edge"
+voice = "ko-KR-SunHiNeural"     # 남성: ko-KR-InJoonNeural
+rate = "+10%"
+sapi_rate = 190
+# 이 길이를 넘는 답변은 앞부분만 읽고 나머지는 화면으로 안내
+speak_max_chars = 700
+
+[safety]
+# 이 목록의 도구는 실행 전 콘솔에서 y/n 확인을 받습니다.
+confirm_tools = ["run_command", "build_project", "gmail_send", "calendar_create_event"]
+# 파일 읽기/검색이 허용되는 최상위 경로. 여기 벗어나면 거부합니다.
+# 빈 목록이면 홈 디렉터리와 프로젝트 경로가 기본 적용됩니다.
+allowed_roots = []
+
+[skills]
+# 켤 기능 모음
+pc = true
+notes = true
+dev = true
+google = false      # 메일/일정: credentials.json 준비 후 true 로
+web = true          # 웹 검색·요약 (Anthropic 서버측 도구, 추가 키 불필요)
+
+[pc]
+# "포토샵 켜줘" 처럼 부를 이름 = 실행 대상 (exe 경로, 앱 이름, URL 모두 가능)
+[pc.apps]
+"메모장" = "notepad.exe"
+"계산기" = "calc.exe"
+"탐색기" = "explorer.exe"
+"크롬" = "chrome.exe"
+"vscode" = "code"
+"유니버설엔진" = "C:/Program Files/Epic Games/UE_5.8/Engine/Binaries/Win64/UnrealEditor.exe"
+"유튜브" = "https://www.youtube.com"
+"깃허브" = "https://github.com/haru7821/roh"
+
+[dev]
+# 개발 비서가 다룰 저장소 경로
+repo_path = "C:/Projects/ROH"
+# 빌드 명령 (프로젝트 루트 기준)
+build_command = "update.bat"
+build_timeout_seconds = 3600
+
+[google]
+# https://console.cloud.google.com 에서 받은 OAuth 클라이언트 파일 경로
+credentials_file = "secrets/credentials.json"
+token_file = "secrets/token.json"
+calendar_id = "primary"

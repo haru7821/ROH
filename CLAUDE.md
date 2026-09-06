@@ -24,6 +24,13 @@ Rune of Hell — UE 5.8 / GAS 기반 싱글플레이 핵앤슬래시 ARPG.
   화면 좌상단 상태 텍스트로 사용자가 실행 중인 빌드를 즉시 식별한다.
 - 로컬 재빌드는 반드시 `update.bat` 경유 (에디터 더블클릭은 스테일 DLL 함정 있음).
 
+## 부속 도구: tools/jarvis (게임 코드 아님)
+
+`tools/jarvis/` 는 소유자용 개인 음성 비서(Python, Claude API)다. 게임 런타임과
+무관하므로 `ROH_BUILD_TAG` 증가 규칙과 UE 빌드 검증 대상이 아니다.
+설정(`config.toml`)·토큰(`secrets/`)·런타임 데이터(`data/`)는 커밋 금지.
+사용법은 `tools/jarvis/README.md`.
+
 ## 아키텍처 원칙 (docs/03 요약)
 
 - 모든 스탯 보정은 GameplayEffect로만 (장비/스킬/정복자/버프)

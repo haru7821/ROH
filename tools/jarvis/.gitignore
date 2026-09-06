@@ -1,0 +1,9 @@
+# 개인 설정 / 비밀정보 / 런타임 데이터 — 절대 커밋 금지
+config.toml
+.venv/
+data/
+secrets/
+credentials.json
+token.json
+__pycache__/
+*.pyc
