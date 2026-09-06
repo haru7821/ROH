@@ -1,9 +1,12 @@
 """전역 단축키 — 누름/뗌을 각각 잡아 '눌러서 말하기'를 만든다."""
 from __future__ import annotations
 
+import os
 from typing import Callable
 
 from pynput import keyboard
+
+from . import log
 
 # pynput 이 좌/우 수정자를 일반 수정자로 바꾸지 못하는 경우를 대비한 보정표
 _MODIFIER_ALIASES = {
@@ -17,6 +20,28 @@ _MODIFIER_ALIASES = {
     keyboard.Key.cmd_l: keyboard.Key.cmd,
     keyboard.Key.cmd_r: keyboard.Key.cmd,
 }
+
+
+# 윈도우에서 실제 키가 눌려 있는지 재확인하기 위한 가상 키 코드
+_VK_BY_KEY = {
+    keyboard.Key.ctrl: 0x11,
+    keyboard.Key.alt: 0x12,
+    keyboard.Key.shift: 0x10,
+    keyboard.Key.cmd: 0x5B,
+}
+
+
+def _physically_down(key) -> bool | None:
+    """None = 확인 불가(윈도우가 아니거나 조회 실패)."""
+    vk = _VK_BY_KEY.get(key)
+    if vk is None or os.name != "nt":
+        return None
+    try:
+        import ctypes
+
+        return bool(ctypes.windll.user32.GetAsyncKeyState(vk) & 0x8000)
+    except Exception:  # noqa: BLE001
+        return None
 
 
 class _Combo:
@@ -46,23 +71,61 @@ class HotkeyManager:
                 pass
         return _MODIFIER_ALIASES.get(key, key)
 
+    def _drop_stale_modifiers(self) -> None:
+        """창 전환·UAC 등으로 뗌 이벤트를 놓쳐 남아 있는 수정자를 털어낸다.
+        이게 없으면 'ctrl 이 눌린 것으로 착각한 상태에서 q 를 타이핑' 만으로
+        종료 단축키가 발동한다."""
+        for key in list(self._pressed):
+            if _physically_down(key) is False:
+                self._pressed.discard(key)
+
+    def _fire(self, callback: Callable[[], None] | None) -> None:
+        """콜백 예외가 pynput 리스너 스레드로 새면 단축키가 조용히 죽는다."""
+        if callback is None:
+            return
+        try:
+            callback()
+        except Exception as exc:  # noqa: BLE001
+            log.error(f"단축키 처리 중 오류: {exc!r}")
+
     def _on_press(self, key) -> None:
-        resolved = self._canonical(key)
-        self._pressed.add(resolved)
-        for combo in self._combos:
-            if not combo.engaged and combo.keys <= self._pressed:
+        try:
+            resolved = self._canonical(key)
+            self._pressed.add(resolved)
+            self._drop_stale_modifiers()
+            fired = [
+                combo for combo in self._combos
+                if not combo.engaged and combo.keys <= self._pressed
+            ]
+            for combo in fired:
                 combo.engaged = True
-                if combo.on_press:
-                    combo.on_press()
+        except Exception as exc:  # noqa: BLE001
+            log.error(f"단축키 상태 갱신 실패: {exc!r}")
+            return
+        for combo in fired:
+            self._fire(combo.on_press)
 
     def _on_release(self, key) -> None:
-        resolved = self._canonical(key)
-        self._pressed.discard(resolved)
-        for combo in self._combos:
-            if combo.engaged and resolved in combo.keys:
+        try:
+            resolved = self._canonical(key)
+            self._pressed.discard(resolved)
+            released = [
+                combo for combo in self._combos
+                if combo.engaged and resolved in combo.keys
+            ]
+            for combo in released:
                 combo.engaged = False
-                if combo.on_release:
-                    combo.on_release()
+        except Exception as exc:  # noqa: BLE001
+            log.error(f"단축키 상태 갱신 실패: {exc!r}")
+            return
+        for combo in released:
+            self._fire(combo.on_release)
+
+    def reset_state(self) -> None:
+        """감시자가 이상 상태를 발견했을 때 키 상태를 초기화한다."""
+        self._pressed.clear()
+        for combo in self._combos:
+            combo.engaged = False
 
     def start(self) -> None:
         self._listener = keyboard.Listener(

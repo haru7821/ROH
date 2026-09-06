@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from .. import log
 from ..config import DATA_DIR
 from .base import Ctx, Tool, ToolError, clip, obj
 
@@ -17,7 +18,17 @@ def _load() -> list[dict]:
         return []
     try:
         data = json.loads(NOTES_FILE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except OSError as exc:
+        log.warn(f"메모 파일을 읽지 못했습니다: {exc}")
+        return []
+    except json.JSONDecodeError:
+        # 빈 목록을 돌려주면 다음 저장이 원본을 덮어써 기억이 통째로 사라진다.
+        backup = NOTES_FILE.with_name(f"notes.corrupt-{int(time.time())}.json")
+        try:
+            NOTES_FILE.rename(backup)
+            log.warn(f"메모 파일이 손상되어 {backup.name} 으로 보존했습니다.")
+        except OSError:
+            log.error("메모 파일이 손상되었고 백업도 실패했습니다. 수동 확인이 필요합니다.")
         return []
     return data if isinstance(data, list) else []
 

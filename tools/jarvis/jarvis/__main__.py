@@ -111,15 +111,19 @@ class Jarvis:
         def begin() -> None:
             if busy.is_set() or recorder.active:
                 return
-            recorder.start()
-            print("\n🎤 듣는 중…", end="", flush=True)
+            try:
+                recorder.start()
+            except Exception as exc:  # noqa: BLE001 - 마이크 점유 등
+                log.error(f"녹음을 시작할 수 없습니다: {exc}")
+                return
+            print("\n>>> 듣는 중...", end="", flush=True)
 
         def finish() -> None:
             if not recorder.active:
                 return
             audio = recorder.stop()
             seconds = len(audio) / 16_000
-            print(f"\r🎤 {seconds:.1f}초 녹음 완료.        ")
+            print(f"\r>>> {seconds:.1f}초 녹음 완료.          ")
             if seconds < min_seconds:
                 log.info("너무 짧아서 무시했습니다.")
                 return
@@ -143,11 +147,18 @@ class Jarvis:
         log.info(f"  도구 {len(self.agent.tool_names())}개: {', '.join(self.agent.tool_names())}")
         self.speaker.speak(f"{name} 준비되었습니다.")
 
+        max_seconds = float(self.config.get("audio.max_seconds", 60.0))
         try:
             while not self.stop_event.is_set():
                 try:
                     audio = audio_queue.get(timeout=0.3)
                 except queue.Empty:
+                    # 창 전환이나 UAC 로 '키 뗌'을 놓치면 녹음이 끝나지 않는다.
+                    # 상한을 넘기면 강제로 끊고 단축키 상태도 되돌린다.
+                    if recorder.overran():
+                        log.warn(f"{max_seconds:.0f}초를 넘겨 녹음을 자동 종료합니다.")
+                        finish()
+                        hotkeys.reset_state()
                     continue
                 busy.set()
                 try:
@@ -167,7 +178,19 @@ class Jarvis:
         log.banner("종료했습니다.")
 
 
+def _prepare_console() -> None:
+    """cp949 콘솔에서 한글·기호 출력이 UnicodeEncodeError 로 죽지 않게 한다."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            try:
+                reconfigure(encoding="utf-8", errors="replace")
+            except Exception:  # noqa: BLE001
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _prepare_console()
     parser = argparse.ArgumentParser(prog="jarvis", description="개인 음성 비서")
     parser.add_argument("--config", type=Path, default=None, help="설정 파일 경로")
     parser.add_argument("--text", action="store_true", help="마이크 없이 텍스트로 대화")

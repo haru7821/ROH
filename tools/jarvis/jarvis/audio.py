@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+import time
 
 import numpy as np
 import sounddevice as sd
@@ -27,51 +28,76 @@ class Recorder:
         self.device = device
         self.samplerate = samplerate
         self.max_frames = int(samplerate * max_seconds)
+        self.max_seconds = max_seconds
         self._frames: list[np.ndarray] = []
+        self._frame_count = 0
         self._stream: sd.InputStream | None = None
-        self._lock = threading.Lock()
+        self._started_at: float | None = None
+        self._lock = threading.Lock()          # 프레임 버퍼용
+        self._stream_lock = threading.RLock()  # 스트림 생성/종료용
 
     @property
     def active(self) -> bool:
         return self._stream is not None
 
+    @property
+    def elapsed(self) -> float:
+        started = self._started_at
+        return 0.0 if started is None else time.monotonic() - started
+
     def _callback(self, indata, frames, time_info, status):  # noqa: ARG002
         # 사운드 콜백은 별도 스레드에서 돈다. 반드시 복사해서 보관할 것.
         with self._lock:
-            if self._total_frames() < self.max_frames:
-                self._frames.append(indata[:, 0].copy())
-
-    def _total_frames(self) -> int:
-        return sum(len(chunk) for chunk in self._frames)
+            if self._frame_count < self.max_frames:
+                chunk = indata[:, 0].copy()
+                self._frames.append(chunk)
+                self._frame_count += len(chunk)
 
     def start(self) -> None:
-        if self._stream is not None:
-            return
-        with self._lock:
-            self._frames = []
-        stream = sd.InputStream(
-            samplerate=self.samplerate,
-            channels=1,
-            dtype="float32",
-            device=self.device,
-            callback=self._callback,
-            blocksize=0,
-        )
-        stream.start()
-        self._stream = stream
+        with self._stream_lock:
+            if self._stream is not None:
+                return
+            with self._lock:
+                self._frames = []
+                self._frame_count = 0
+            stream = sd.InputStream(
+                samplerate=self.samplerate,
+                channels=1,
+                dtype="float32",
+                device=self.device,
+                callback=self._callback,
+                blocksize=0,
+            )
+            # 스트림을 먼저 등록해야 start() 가 느릴 때 두 번 열리지 않는다.
+            self._stream = stream
+            self._started_at = time.monotonic()
+            try:
+                stream.start()
+            except Exception:
+                self._stream = None
+                self._started_at = None
+                stream.close()
+                raise
 
     def stop(self) -> np.ndarray:
-        stream, self._stream = self._stream, None
-        if stream is not None:
-            try:
-                stream.stop()
-            finally:
-                stream.close()
+        with self._stream_lock:
+            stream, self._stream = self._stream, None
+            self._started_at = None
+            if stream is not None:
+                try:
+                    stream.stop()
+                finally:
+                    stream.close()
         with self._lock:
             frames, self._frames = self._frames, []
+            self._frame_count = 0
         if not frames:
             return np.zeros(0, dtype=np.float32)
         return np.concatenate(frames).astype(np.float32, copy=False)
 
     def abort(self) -> None:
         self.stop()
+
+    def overran(self) -> bool:
+        """max_seconds 를 넘겼는지. 뗌 이벤트를 놓쳐도 감시자가 끊을 수 있게 한다."""
+        return self.active and self.elapsed > self.max_seconds

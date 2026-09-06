@@ -10,8 +10,10 @@ from pathlib import Path
 from ..config import APP_DIR
 from .base import Ctx, Tool, ToolError, clip, obj
 
+# 필요한 만큼만 요청한다. gmail.modify 는 라벨 변경·삭제까지 포함해 과하다.
 SCOPES = [
-    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.compose",
     "https://www.googleapis.com/auth/calendar",
 ]
 
@@ -102,7 +104,8 @@ def _body_text(payload: dict) -> str:
         mime = part.get("mimeType", "")
         data = part.get("body", {}).get("data")
         if data:
-            decoded = base64.urlsafe_b64decode(data.encode()).decode("utf-8", errors="replace")
+            padded = data + "=" * (-len(data) % 4)  # 패딩이 빠져 오는 경우 방어
+            decoded = base64.urlsafe_b64decode(padded.encode()).decode("utf-8", errors="replace")
             if mime == "text/plain":
                 return decoded
             if mime == "text/html" and not html_fallback:

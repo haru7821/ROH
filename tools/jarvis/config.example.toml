@@ -63,8 +63,11 @@ speak_max_chars = 700
 # 이 목록의 도구는 실행 전 콘솔에서 y/n 확인을 받습니다.
 confirm_tools = ["run_command", "build_project", "gmail_send", "calendar_create_event"]
 # 파일 읽기/검색이 허용되는 최상위 경로. 여기 벗어나면 거부합니다.
-# 빈 목록이면 홈 디렉터리와 프로젝트 경로가 기본 적용됩니다.
+# 빈 목록이면 문서/다운로드/바탕화면 + 아래 repo_path 가 적용됩니다.
+# (홈 전체를 열면 .ssh 나 브라우저 자격증명까지 노출되므로 기본에서 제외합니다.)
 allowed_roots = []
+# 허용 경로 안이라도 키·토큰이 들어 있을 만한 파일(.pem, .env, secrets/,
+# .ssh/, token.json 등)은 코드에서 항상 차단합니다.
 
 [skills]
 # 켤 기능 모음
@@ -91,7 +94,7 @@ web = true          # 웹 검색·요약 (Anthropic 서버측 도구, 추가 키
 repo_path = "C:/Projects/ROH"
 # 빌드 명령 (프로젝트 루트 기준)
 build_command = "update.bat"
-build_timeout_seconds = 3600
+build_timeout_seconds = 900
 
 [google]
 # https://console.cloud.google.com 에서 받은 OAuth 클라이언트 파일 경로

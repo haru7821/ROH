@@ -4,7 +4,28 @@ from __future__ import annotations
 import os
 import sys
 
-_ENABLED = os.environ.get("JARVIS_NO_COLOR") != "1" and sys.stdout.isatty()
+def _enable_windows_ansi() -> bool:
+    """구형 conhost 는 VT 처리가 꺼져 있어 색상 코드가 쓰레기 문자로 보인다."""
+    if os.name != "nt":
+        return True
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            return False
+        return bool(kernel32.SetConsoleMode(handle, mode.value | 0x0004))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+_ENABLED = (
+    os.environ.get("JARVIS_NO_COLOR") != "1"
+    and sys.stdout.isatty()
+    and _enable_windows_ansi()
+)
 
 
 def _c(code: str, text: str) -> str:

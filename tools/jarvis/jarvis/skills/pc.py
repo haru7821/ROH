@@ -20,6 +20,11 @@ SKIP_DIRS = {
 }
 SEARCH_TIME_BUDGET = 12.0  # 초
 MAX_READ_BYTES = 2_000_000
+# 열기만 해도 코드가 실행되는 확장자 — 확인 없이 열지 않는다.
+EXECUTABLE_SUFFIXES = {
+    ".exe", ".bat", ".cmd", ".com", ".ps1", ".vbs", ".js", ".jse",
+    ".msi", ".scr", ".lnk", ".reg", ".hta", ".wsf",
+}
 
 
 def _decode(raw: bytes) -> str:
@@ -31,8 +36,14 @@ def _decode(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _is_url(value: str) -> bool:
+    return value.startswith(("http://", "https://"))
+
+
 def _launch(target: str) -> None:
-    if target.startswith(("http://", "https://")):
+    """셸을 절대 거치지 않는다. shell=True 로 폴백하면 open_app 이
+    확인 없는 임의 명령 실행 통로가 된다."""
+    if _is_url(target):
         webbrowser.open(target)
         return
     path = Path(target).expanduser()
@@ -44,8 +55,8 @@ def _launch(target: str) -> None:
             starter(target)  # type: ignore[misc]
             return
         except OSError:
-            pass  # PATH 에 없는 이름이면 셸로 한 번 더 시도
-        subprocess.Popen(target, shell=True)
+            # PATH 에만 있는 실행 파일 (예: code). 셸 없이 그대로 띄운다.
+            subprocess.Popen([target], shell=False)
         return
     opener = "open" if sys.platform == "darwin" else "xdg-open"
     subprocess.Popen([opener, target])
@@ -62,7 +73,19 @@ def open_app(ctx: Ctx, name: str) -> str:
                 target, name = value, alias
                 break
     if target is None:
-        target = name  # 등록되지 않은 이름은 그대로 실행 시도
+        # 등록되지 않은 이름은 URL 이나 실제 존재하는 파일일 때만 허용한다.
+        # 그러지 않으면 임의 명령 문자열이 이 도구로 흘러들 수 있다.
+        candidate = name.strip()
+        if _is_url(candidate):
+            target = candidate
+        elif Path(candidate).expanduser().exists():
+            target = str(ctx.safe_path(candidate))
+        else:
+            raise ToolError(
+                f"'{name}' 은(는) 등록된 앱이 아닙니다. "
+                "config.toml 의 [pc.apps] 에 추가하거나, 명령 실행이 필요하면 "
+                "run_command 를 쓰세요."
+            )
     try:
         _launch(str(target))
     except Exception as exc:  # noqa: BLE001
@@ -72,6 +95,9 @@ def open_app(ctx: Ctx, name: str) -> str:
 
 def open_path(ctx: Ctx, path: str) -> str:
     resolved = ctx.safe_path(path)
+    if resolved.suffix.lower() in EXECUTABLE_SUFFIXES:
+        if not ctx.approver.ask("open_path", f"실행 파일을 엽니다: {resolved}"):
+            return "사용자가 실행을 거부했습니다."
     try:
         _launch(str(resolved))
     except Exception as exc:  # noqa: BLE001
@@ -149,6 +175,7 @@ def run_command(ctx: Ctx, command: str, cwd: str | None = None, timeout: int = 1
     try:
         proc = subprocess.run(
             command, shell=True, cwd=workdir, capture_output=True,
+            stdin=subprocess.DEVNULL,  # pause / set /p 로 영원히 멈추는 것을 막는다
             timeout=max(1, int(timeout)),
         )
     except subprocess.TimeoutExpired:
